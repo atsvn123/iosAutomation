@@ -51,9 +51,9 @@ static CGSize stableCanvasSizeForOrientation(UIInterfaceOrientation orientation)
     return CGSizeMake(screenBoundsWidth, screenBoundsHeight);
 }
 
-static BOOL frontMostAppSupportsOnlyPortrait(void)
+static NSDictionary *frontMostAppInfoDictionary(void)
 {
-    __block BOOL portraitOnly = NO;
+    __block NSDictionary *info = nil;
     dispatch_sync(dispatch_get_main_queue(), ^{
         @try {
             SpringBoard *springboard = (SpringBoard*)[%c(SpringBoard) sharedApplication];
@@ -71,10 +71,19 @@ static BOOL frontMostAppSupportsOnlyPortrait(void)
                 return;
             }
 
-            NSDictionary *info = nil;
+            if ([frontApp respondsToSelector:@selector(infoDictionary)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                NSDictionary *frontInfo = [frontApp performSelector:@selector(infoDictionary)];
+#pragma clang diagnostic pop
+                if ([frontInfo isKindOfClass:[NSDictionary class]]) {
+                    info = frontInfo;
+                }
+            }
+
             Class proxyClass = NSClassFromString(@"LSApplicationProxy");
             SEL proxySelector = NSSelectorFromString(@"applicationProxyForIdentifier:");
-            if (proxyClass && [proxyClass respondsToSelector:proxySelector]) {
+            if (!info && proxyClass && [proxyClass respondsToSelector:proxySelector]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
                 id proxy = [proxyClass performSelector:proxySelector withObject:bundleIdentifier];
@@ -87,26 +96,41 @@ static BOOL frontMostAppSupportsOnlyPortrait(void)
                     info = [NSDictionary dictionaryWithContentsOfURL:[bundleURL URLByAppendingPathComponent:@"Info.plist"]];
                 }
             }
-
-            NSArray *orientations = info[@"UISupportedInterfaceOrientations"];
-            NSArray *ipadOrientations = info[@"UISupportedInterfaceOrientations~ipad"];
-            if (ipadOrientations.count > 0) orientations = ipadOrientations;
-            if (orientations.count == 0) return;
-
-            BOOL hasLandscape = NO;
-            for (NSString *orientation in orientations) {
-                if ([orientation containsString:@"Landscape"]) {
-                    hasLandscape = YES;
-                    break;
-                }
-            }
-            portraitOnly = !hasLandscape;
         }
         @catch (NSException *exception) {
-            portraitOnly = NO;
+            info = nil;
         }
     });
-    return portraitOnly;
+    return info;
+}
+
+static BOOL frontMostAppSupportsLandscape(void)
+{
+    NSDictionary *info = frontMostAppInfoDictionary();
+    NSArray *orientations = info[@"UISupportedInterfaceOrientations"];
+    NSArray *ipadOrientations = info[@"UISupportedInterfaceOrientations~ipad"];
+    if (ipadOrientations.count > 0) orientations = ipadOrientations;
+    if (orientations.count == 0) return YES;
+
+    for (NSString *orientation in orientations) {
+        if ([orientation containsString:@"Landscape"]) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+static UIInterfaceOrientation currentIndicatorOrientation(void)
+{
+    if (!frontMostAppSupportsLandscape()) {
+        return UIInterfaceOrientationPortrait;
+    }
+
+    int o = [Screen getScreenOrientation];
+    if (o >= UIInterfaceOrientationPortrait && o <= UIInterfaceOrientationLandscapeRight) {
+        return (UIInterfaceOrientation)o;
+    }
+    return UIInterfaceOrientationPortrait;
 }
 
 void report_memory(void) {
@@ -332,13 +356,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
             // reuse the cached value for the moves within that gesture.
             if (touch == 1 && (eventMask & 2))
             {
-                int o = [Screen getScreenOrientation];
-                if (o >= UIInterfaceOrientationPortrait && o <= UIInterfaceOrientationLandscapeRight)
-                {
-                    if ((o == UIInterfaceOrientationLandscapeLeft || o == UIInterfaceOrientationLandscapeRight) && frontMostAppSupportsOnlyPortrait())
-                        o = UIInterfaceOrientationPortrait;
-                    cachedOrientation = (UIInterfaceOrientation)o;
-                }
+                cachedOrientation = currentIndicatorOrientation();
             }
             UIInterfaceOrientation ori = cachedOrientation;
             CGSize canvasSize = stableCanvasSizeForOrientation(ori);

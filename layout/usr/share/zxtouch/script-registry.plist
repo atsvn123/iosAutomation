@@ -17,6 +17,9 @@
         <dict><key>name</key><string>Find Color</string><key>type</key><string>python</string><key>path</key><string>examples/Find Color.bdl</string><key>entry</key><string>color_searcher.py</string></dict>
         <dict><key>name</key><string>Device Info</string><key>type</key><string>python</string><key>path</key><string>examples/Device Info.bdl</string><key>entry</key><string>device_info.py</string></dict>
         <dict><key>name</key><string>Alert Box</string><key>type</key><string>python</string><key>path</key><string>examples/Alert Box.bdl</string><key>entry</key><string>alertbox.py</string></dict>
+        <dict><key>name</key><string>Prompt Input</string><key>type</key><string>python</string><key>path</key><string>examples/Prompt Input.bdl</string><key>entry</key><string>prompt_input.py</string></dict>
+        <dict><key>name</key><string>Screen Info</string><key>type</key><string>python</string><key>path</key><string>examples/Screen Info.bdl</string><key>entry</key><string>screen_info.py</string></dict>
+        <dict><key>name</key><string>Tap Corners</string><key>type</key><string>python</string><key>path</key><string>examples/Tap Corners.bdl</string><key>entry</key><string>tap_corners.py</string></dict>
     </array>
 </dict>
 </plist>

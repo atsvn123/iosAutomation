@@ -9,6 +9,7 @@
 
 static BOOL switchAppBeforeRunScript = true;
 ScriptPlayer *scriptPlayer;
+static float currentRunSpeed = 1.0f;
 
 void initScriptPlayer()
 {
@@ -40,13 +41,10 @@ int playScript(UInt8* path, NSError **error)
 
     if (config)
     {
-        // Per-script settings (written by ZXTouch app) take priority
+        // App-launched scripts only use per-script settings written by the app.
+        // Floating panel settings are handled separately so they do not leak.
         NSDictionary *individualConfigs = config[@"individual_configs"];
         NSDictionary *scriptInfo = [individualConfigs valueForKey:[NSString stringWithFormat:@"%s", path]];
-
-        // Fall back to global settings written by the panel
-        if (!scriptInfo)
-            scriptInfo = config[@"scriptPlaybackInfo"];
 
         if (scriptInfo)
         {
@@ -56,7 +54,20 @@ int playScript(UInt8* path, NSError **error)
             if (sp > 0) playSpeed = sp;
         }
     }
-    
+
+    return playScriptWithSettings(path, repeatTime, playSpeed, sleepBetweenRun, error);
+}
+
+int playScriptWithSettings(UInt8* path, int repeatTime, float playSpeed, float sleepBetweenRun, NSError **error)
+{
+    if (!scriptPlayer)
+    {
+        NSLog(@"com.zjx.springboard: Unable to run the script. Internal error. scriptPlayer is null.");
+        *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Unable to run the script. Internal error. scriptPlayer is null.\r\n"}];
+        return -1;
+    }
+    if (playSpeed <= 0) playSpeed = 1.0f;
+    currentRunSpeed = playSpeed;
 
     [scriptPlayer setPath:[NSString stringWithFormat:@"%s", path]];
     [scriptPlayer setRepeatTime:repeatTime];
@@ -86,13 +97,7 @@ void playHasStoppedCallBack()
     NSString *scriptName = (bundlePath.length > 0) ? [[bundlePath lastPathComponent] stringByDeletingPathExtension] : @"Unknown";
     int completedRuns = [scriptPlayer getCompletedRuns];
 
-    NSDictionary *settings = nil;
-    if ([[NSFileManager defaultManager] fileExistsAtPath:SCRIPT_PLAY_CONFIG_PATH])
-        settings = [[NSDictionary alloc] initWithContentsOfFile:SCRIPT_PLAY_CONFIG_PATH];
-    NSDictionary *info = settings[@"scriptPlaybackInfo"];
-    float speed = info[@"speed"] ? [info[@"speed"] floatValue] : 1.0f;
-
     NSString *msg = [NSString stringWithFormat:@"Script: %@\nSpeed: %.1f×\nPlayed: %d time(s)",
-                     scriptName, speed, completedRuns];
-    showAlertBox(@"Script Finished", msg, 2);
+                     scriptName, currentRunSpeed, completedRuns];
+    showAlertBox(@"Script Finished", msg, 0);
 }

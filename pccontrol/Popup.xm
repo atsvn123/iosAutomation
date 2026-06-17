@@ -256,7 +256,7 @@ void applyPanelDarkMode(BOOL dark) {
                         [self saveSettings:_repeatCount speed:_speed interval:_interval];
                         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                             NSError *err = nil;
-                            playScript((UInt8*)[fullPath UTF8String], &err);
+                            playScriptWithSettings((UInt8*)[fullPath UTF8String], repeat, sp, intv, &err);
                             if (err) showAlertBox(@"Error", [err localizedDescription], 999);
                         });
                     }]];
@@ -270,7 +270,7 @@ void applyPanelDarkMode(BOOL dark) {
                     [self saveSettings:_repeatCount speed:_speed interval:_interval];
                     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                         NSError *err = nil;
-                        playScript((UInt8*)[fullPath UTF8String], &err);
+                        playScriptWithSettings((UInt8*)[fullPath UTF8String], _repeatCount, _speed, _interval, &err);
                         if (err) showAlertBox(@"Error", [err localizedDescription], 999);
                     });
                 }
@@ -285,7 +285,7 @@ void applyPanelDarkMode(BOOL dark) {
 
 - (void) saveSettings:(int)repeat speed:(float)speed interval:(float)interval {
     NSMutableDictionary *config = [NSMutableDictionary dictionary];
-    config[@"scriptPlaybackInfo"] = @{
+    config[@"panelPlaybackInfo"] = @{
         SETTINGS_KEY_REPEAT: @(repeat),
         SETTINGS_KEY_SPEED: @(speed),
         SETTINGS_KEY_INTERVAL: @(interval)
@@ -358,6 +358,13 @@ void applyPanelDarkMode(BOOL dark) {
     dispatch_async(dispatch_get_main_queue(), ^{
         // Apply dark mode from config each time the panel opens
         NSDictionary *cfg = [[NSDictionary alloc] initWithContentsOfFile:SCRIPT_PLAY_CONFIG_PATH];
+        NSDictionary *panelInfo = cfg[@"panelPlaybackInfo"];
+        if (panelInfo) {
+            _repeatCount = [panelInfo[@"repeat_times"] intValue];
+            float sp = [panelInfo[@"speed"] floatValue];
+            _speed = sp > 0 ? sp : 1.0f;
+            _interval = [panelInfo[@"interval"] floatValue];
+        }
         NSDictionary *tweakCfg = nil;
         NSString *configFilePath = [NSString stringWithFormat:@"/var/mobile/Library/ZXTouch/config/tweak/config.plist"];
         if ([[NSFileManager defaultManager] fileExistsAtPath:configFilePath])
