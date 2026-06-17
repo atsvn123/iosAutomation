@@ -169,6 +169,21 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     return selectedOrientation;
 }
 
+@interface TouchIndicatorRootViewController : UIViewController
+@end
+
+@implementation TouchIndicatorRootViewController
+- (BOOL)shouldAutorotate
+{
+    return NO;
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations
+{
+    return UIInterfaceOrientationMaskAll;
+}
+@end
+
 void report_memory(void) {
   struct task_basic_info info;
   mach_msg_type_number_t size = TASK_BASIC_INFO_COUNT;
@@ -454,14 +469,9 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
     if (self)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
-            UIWindowScene *scene = (UIWindowScene *)[[UIApplication sharedApplication].connectedScenes anyObject];
-            if (scene) {
-                _window = [[UIWindow alloc] initWithWindowScene:scene];
-            } else {
-                _window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screenBoundsWidth, screenBoundsHeight)];
-            }
+            _window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screenBoundsWidth, screenBoundsHeight)];
             _window.windowLevel = UIWindowLevelAlert + 2;
-            _window.rootViewController = [[UIViewController alloc] init];
+            _window.rootViewController = [[TouchIndicatorRootViewController alloc] init];
             [_window setBackgroundColor:[UIColor clearColor]];
             [_window setUserInteractionEnabled:NO];
             [_window setAutoresizingMask:18];
