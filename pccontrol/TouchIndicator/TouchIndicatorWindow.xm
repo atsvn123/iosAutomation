@@ -29,6 +29,7 @@
 static Boolean isShowing = false;
 static Boolean showCoordinates = true;
 static UIInterfaceOrientation cachedOrientation = UIInterfaceOrientationPortrait;
+static UIInterfaceOrientation cachedInputOrientation = UIInterfaceOrientationPortrait;
 
 static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHIDServiceRef service, IOHIDEventRef parentEvent);
 
@@ -71,7 +72,7 @@ static CGSize stableCanvasSizeForOrientation(UIInterfaceOrientation orientation)
 static NSString *frontMostAppBundleIdentifier(void)
 {
     __block NSString *bundleIdentifier = nil;
-    dispatch_sync(dispatch_get_main_queue(), ^{
+    void (^readBundleIdentifier)(void) = ^{
         @try {
             SpringBoard *springboard = (SpringBoard*)[%c(SpringBoard) sharedApplication];
             SBApplication *frontApp = nil;
@@ -87,14 +88,16 @@ static NSString *frontMostAppBundleIdentifier(void)
         @catch (NSException *exception) {
             bundleIdentifier = nil;
         }
-    });
+    };
+    if ([NSThread isMainThread]) readBundleIdentifier();
+    else dispatch_sync(dispatch_get_main_queue(), readBundleIdentifier);
     return bundleIdentifier;
 }
 
 static NSDictionary *frontMostAppInfoDictionary(NSString *bundleIdentifier)
 {
     __block NSDictionary *info = nil;
-    dispatch_sync(dispatch_get_main_queue(), ^{
+    void (^readInfo)(void) = ^{
         @try {
             if (!bundleIdentifier || [bundleIdentifier isEqualToString:@"com.apple.springboard"]) return;
 
@@ -133,7 +136,9 @@ static NSDictionary *frontMostAppInfoDictionary(NSString *bundleIdentifier)
         @catch (NSException *exception) {
             info = nil;
         }
-    });
+    };
+    if ([NSThread isMainThread]) readInfo();
+    else dispatch_sync(dispatch_get_main_queue(), readInfo);
     return info;
 }
 
@@ -153,21 +158,36 @@ static BOOL frontMostAppSupportsLandscape(NSString *bundleIdentifier)
     return NO;
 }
 
+static UIInterfaceOrientation inputOrientationForDeviceOrientation(UIDeviceOrientation deviceOrientation)
+{
+    if (deviceOrientation == UIDeviceOrientationLandscapeLeft) {
+        return UIInterfaceOrientationLandscapeRight;
+    }
+    if (deviceOrientation == UIDeviceOrientationLandscapeRight) {
+        return UIInterfaceOrientationLandscapeLeft;
+    }
+    if (deviceOrientation == UIDeviceOrientationPortraitUpsideDown) {
+        return UIInterfaceOrientationPortraitUpsideDown;
+    }
+    return UIInterfaceOrientationPortrait;
+}
+
 static UIInterfaceOrientation currentIndicatorOrientation(void)
 {
     NSString *bundleIdentifier = frontMostAppBundleIdentifier();
     BOOL supportsLandscape = frontMostAppSupportsLandscape(bundleIdentifier);
     int frontOrientation = [Screen getScreenOrientation];
     UIInterfaceOrientation selectedOrientation = UIInterfaceOrientationPortrait;
+    UIDeviceOrientation deviceOrientation = [[UIDevice currentDevice] orientation];
 
     if (supportsLandscape && frontOrientation >= UIInterfaceOrientationPortrait && frontOrientation <= UIInterfaceOrientationLandscapeRight) {
         selectedOrientation = (UIInterfaceOrientation)frontOrientation;
     }
+    cachedInputOrientation = supportsLandscape ? selectedOrientation : inputOrientationForDeviceOrientation(deviceOrientation);
 
     if (logNextIndicatorOrientation) {
-        UIDeviceOrientation deviceOrientation = [[UIDevice currentDevice] orientation];
-        NSString *message = [NSString stringWithFormat:@"bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld deviceOrientation=%ld\n",
-                             bundleIdentifier ?: @"unknown", supportsLandscape, frontOrientation, (long)selectedOrientation, (long)deviceOrientation];
+        NSString *message = [NSString stringWithFormat:@"bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld inputOrientation=%ld deviceOrientation=%ld\n",
+                             bundleIdentifier ?: @"unknown", supportsLandscape, frontOrientation, (long)selectedOrientation, (long)cachedInputOrientation, (long)deviceOrientation];
         NSLog(@"com.zjx.springboard.touchindicator: %@", message);
         appendTouchIndicatorDebugLog(message);
         logNextIndicatorOrientation = NO;
@@ -403,8 +423,8 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
                 logNextWindowGeometry = YES;
                 cachedOrientation = currentIndicatorOrientation();
             }
-            UIInterfaceOrientation ori = cachedOrientation;
-            CGSize canvasSize = stableCanvasSizeForOrientation(ori);
+            UIInterfaceOrientation ori = cachedInputOrientation;
+            CGSize canvasSize = stableCanvasSizeForOrientation(cachedOrientation);
             CGFloat W = canvasSize.width, H = canvasSize.height;
 
             switch (ori) {
@@ -450,6 +470,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
 @implementation TouchIndicatorWindow
 {
     UIWindow *_window;
+    id _orientationObserver;
     //TouchIndicatorViewList* indicatorViewList;
     TouchIndicatorView* touchIndicatorViewList[20];
     TouchIndicatorCoordinateView* coordinateView[20];
@@ -458,8 +479,10 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
 
 - (void)updateWindowFrameForOrientation:(UIInterfaceOrientation)orientation {
     CGSize canvasSize = stableCanvasSizeForOrientation(orientation);
-    _window.frame = CGRectMake(0, 0, canvasSize.width, canvasSize.height);
-    _window.rootViewController.view.frame = _window.bounds;
+    [UIView performWithoutAnimation:^{
+        _window.frame = CGRectMake(0, 0, canvasSize.width, canvasSize.height);
+        _window.rootViewController.view.frame = _window.bounds;
+    }];
 }
 
 - (id)init {
@@ -479,6 +502,21 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
             [_window setUserInteractionEnabled:NO];
             [_window setAutoresizingMask:18];
             [self updateWindowFrameForOrientation:cachedOrientation];
+            [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+            _orientationObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIDeviceOrientationDidChangeNotification
+                object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *note) {
+                    NSString *bundleIdentifier = frontMostAppBundleIdentifier();
+                    if (frontMostAppSupportsLandscape(bundleIdentifier)) return;
+
+                    _window.hidden = YES;
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.65 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        if (touchIndicatorWindow == self && isShowing) {
+                            cachedOrientation = UIInterfaceOrientationPortrait;
+                            [self updateWindowFrameForOrientation:cachedOrientation];
+                            _window.hidden = NO;
+                        }
+                    });
+                }];
 
             indicatorColor = [UIColor colorWithRed:255 green:0 blue:0 alpha:0.5];
             //init indicator view list
@@ -494,6 +532,13 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
         });
     }
     return self;
+}
+
+- (void)dealloc {
+    if (_orientationObserver) {
+        [[NSNotificationCenter defaultCenter] removeObserver:_orientationObserver];
+        _orientationObserver = nil;
+    }
 }
 
 
