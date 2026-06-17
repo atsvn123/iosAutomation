@@ -149,8 +149,20 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     }
 
     if (logNextIndicatorOrientation) {
-        NSLog(@"com.zjx.springboard.touchindicator: bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld",
-              bundleIdentifier ?: @"unknown", supportsLandscape, frontOrientation, (long)selectedOrientation);
+        NSString *message = [NSString stringWithFormat:@"bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld\n",
+                             bundleIdentifier ?: @"unknown", supportsLandscape, frontOrientation, (long)selectedOrientation];
+        NSLog(@"com.zjx.springboard.touchindicator: %@", message);
+        NSString *logPath = @"/var/mobile/Library/ZXTouch/logs/orientation-debug.log";
+        NSFileManager *fm = [NSFileManager defaultManager];
+        [fm createDirectoryAtPath:[logPath stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:nil];
+        if (![fm fileExistsAtPath:logPath]) {
+            [message writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+        } else {
+            NSFileHandle *handle = [NSFileHandle fileHandleForWritingAtPath:logPath];
+            [handle seekToEndOfFile];
+            [handle writeData:[message dataUsingEncoding:NSUTF8StringEncoding]];
+            [handle closeFile];
+        }
         logNextIndicatorOrientation = NO;
     }
 
