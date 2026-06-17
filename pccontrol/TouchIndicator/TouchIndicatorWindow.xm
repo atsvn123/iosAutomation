@@ -42,6 +42,7 @@ static CGFloat screenBoundsHeight = 0;
 static CGFloat scale = 0;
 
 static TouchIndicatorWindow *touchIndicatorWindow;
+static BOOL logNextIndicatorOrientation = NO;
 
 static CGSize stableCanvasSizeForOrientation(UIInterfaceOrientation orientation)
 {
@@ -51,9 +52,9 @@ static CGSize stableCanvasSizeForOrientation(UIInterfaceOrientation orientation)
     return CGSizeMake(screenBoundsWidth, screenBoundsHeight);
 }
 
-static NSDictionary *frontMostAppInfoDictionary(void)
+static NSString *frontMostAppBundleIdentifier(void)
 {
-    __block NSDictionary *info = nil;
+    __block NSString *bundleIdentifier = nil;
     dispatch_sync(dispatch_get_main_queue(), ^{
         @try {
             SpringBoard *springboard = (SpringBoard*)[%c(SpringBoard) sharedApplication];
@@ -61,14 +62,30 @@ static NSDictionary *frontMostAppInfoDictionary(void)
             if ([springboard respondsToSelector:@selector(_accessibilityFrontMostApplication)]) {
                 frontApp = [springboard _accessibilityFrontMostApplication];
             }
-            NSString *bundleIdentifier = nil;
             if ([frontApp respondsToSelector:@selector(bundleIdentifier)]) {
                 bundleIdentifier = frontApp.bundleIdentifier;
             } else if ([frontApp respondsToSelector:@selector(displayIdentifier)]) {
                 bundleIdentifier = frontApp.displayIdentifier;
             }
-            if (!bundleIdentifier || [bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
-                return;
+        }
+        @catch (NSException *exception) {
+            bundleIdentifier = nil;
+        }
+    });
+    return bundleIdentifier;
+}
+
+static NSDictionary *frontMostAppInfoDictionary(NSString *bundleIdentifier)
+{
+    __block NSDictionary *info = nil;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        @try {
+            if (!bundleIdentifier || [bundleIdentifier isEqualToString:@"com.apple.springboard"]) return;
+
+            SpringBoard *springboard = (SpringBoard*)[%c(SpringBoard) sharedApplication];
+            SBApplication *frontApp = nil;
+            if ([springboard respondsToSelector:@selector(_accessibilityFrontMostApplication)]) {
+                frontApp = [springboard _accessibilityFrontMostApplication];
             }
 
             if ([frontApp respondsToSelector:@selector(infoDictionary)]) {
@@ -104,9 +121,9 @@ static NSDictionary *frontMostAppInfoDictionary(void)
     return info;
 }
 
-static BOOL frontMostAppSupportsLandscape(void)
+static BOOL frontMostAppSupportsLandscape(NSString *bundleIdentifier)
 {
-    NSDictionary *info = frontMostAppInfoDictionary();
+    NSDictionary *info = frontMostAppInfoDictionary(bundleIdentifier);
     NSArray *orientations = info[@"UISupportedInterfaceOrientations"];
     NSArray *ipadOrientations = info[@"UISupportedInterfaceOrientations~ipad"];
     if (ipadOrientations.count > 0) orientations = ipadOrientations;
@@ -122,15 +139,22 @@ static BOOL frontMostAppSupportsLandscape(void)
 
 static UIInterfaceOrientation currentIndicatorOrientation(void)
 {
-    if (!frontMostAppSupportsLandscape()) {
-        return UIInterfaceOrientationPortrait;
+    NSString *bundleIdentifier = frontMostAppBundleIdentifier();
+    BOOL supportsLandscape = frontMostAppSupportsLandscape(bundleIdentifier);
+    int frontOrientation = [Screen getScreenOrientation];
+    UIInterfaceOrientation selectedOrientation = UIInterfaceOrientationPortrait;
+
+    if (supportsLandscape && frontOrientation >= UIInterfaceOrientationPortrait && frontOrientation <= UIInterfaceOrientationLandscapeRight) {
+        selectedOrientation = (UIInterfaceOrientation)frontOrientation;
     }
 
-    int o = [Screen getScreenOrientation];
-    if (o >= UIInterfaceOrientationPortrait && o <= UIInterfaceOrientationLandscapeRight) {
-        return (UIInterfaceOrientation)o;
+    if (logNextIndicatorOrientation) {
+        NSLog(@"com.zjx.springboard.touchindicator: bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld",
+              bundleIdentifier ?: @"unknown", supportsLandscape, frontOrientation, (long)selectedOrientation);
+        logNextIndicatorOrientation = NO;
     }
-    return UIInterfaceOrientationPortrait;
+
+    return selectedOrientation;
 }
 
 void report_memory(void) {
@@ -356,6 +380,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
             // reuse the cached value for the moves within that gesture.
             if (touch == 1 && (eventMask & 2))
             {
+                logNextIndicatorOrientation = YES;
                 cachedOrientation = currentIndicatorOrientation();
             }
             UIInterfaceOrientation ori = cachedOrientation;
