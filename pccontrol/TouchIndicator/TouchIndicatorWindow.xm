@@ -165,8 +165,9 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     }
 
     if (logNextIndicatorOrientation) {
-        NSString *message = [NSString stringWithFormat:@"bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld\n",
-                             bundleIdentifier ?: @"unknown", supportsLandscape, frontOrientation, (long)selectedOrientation];
+        UIDeviceOrientation deviceOrientation = [[UIDevice currentDevice] orientation];
+        NSString *message = [NSString stringWithFormat:@"bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld deviceOrientation=%ld\n",
+                             bundleIdentifier ?: @"unknown", supportsLandscape, frontOrientation, (long)selectedOrientation, (long)deviceOrientation];
         NSLog(@"com.zjx.springboard.touchindicator: %@", message);
         appendTouchIndicatorDebugLog(message);
         logNextIndicatorOrientation = NO;
@@ -427,7 +428,12 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
             }
 
             if ( touch == 1 && eventMask & 2 )
+            {
+                NSString *message = [NSString stringWithFormat:@"touch raw=[%.4f %.4f] screen=[%.1f %.1f] canvas=[%.1f %.1f] ori=%ld\n",
+                                     x, y, xOnScreen, yOnScreen, W, H, (long)ori];
+                appendTouchIndicatorDebugLog(message);
                 [touchIndicatorWindow showIndicator:index withX:xOnScreen andY:yOnScreen majorRadius:majorRadius];
+            }
             else if ( touch == 1 && eventMask & 4 )
                 [touchIndicatorWindow moveIndicator:index x:xOnScreen y:yOnScreen majorRadius:majorRadius];
 
