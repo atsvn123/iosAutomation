@@ -167,20 +167,6 @@ static BOOL isValidInterfaceOrientation(int orientation)
            orientation == UIInterfaceOrientationLandscapeRight;
 }
 
-static UIInterfaceOrientation inputOrientationForDeviceOrientation(UIDeviceOrientation deviceOrientation)
-{
-    if (deviceOrientation == UIDeviceOrientationLandscapeLeft) {
-        return UIInterfaceOrientationPortrait;
-    }
-    if (deviceOrientation == UIDeviceOrientationLandscapeRight) {
-        return UIInterfaceOrientationLandscapeLeft;
-    }
-    if (deviceOrientation == UIDeviceOrientationPortraitUpsideDown) {
-        return UIInterfaceOrientationPortraitUpsideDown;
-    }
-    return UIInterfaceOrientationPortrait;
-}
-
 static UIInterfaceOrientation currentIndicatorOrientation(void)
 {
     NSString *bundleIdentifier = frontMostAppBundleIdentifier();
@@ -192,8 +178,8 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     if (supportsLandscape && isValidInterfaceOrientation(frontOrientation)) {
         selectedOrientation = (UIInterfaceOrientation)frontOrientation;
     }
-    cachedInputOrientation = supportsLandscape ? selectedOrientation : inputOrientationForDeviceOrientation(deviceOrientation);
-    cachedMirrorInputX = !supportsLandscape && deviceOrientation == UIDeviceOrientationLandscapeLeft;
+    cachedInputOrientation = selectedOrientation;
+    cachedMirrorInputX = NO;
 
     if (logNextIndicatorOrientation) {
         NSString *message = [NSString stringWithFormat:@"bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld inputOrientation=%ld deviceOrientation=%ld mirrorX=%d\n",
