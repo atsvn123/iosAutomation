@@ -161,10 +161,10 @@ static BOOL frontMostAppSupportsLandscape(NSString *bundleIdentifier)
 static UIInterfaceOrientation inputOrientationForDeviceOrientation(UIDeviceOrientation deviceOrientation)
 {
     if (deviceOrientation == UIDeviceOrientationLandscapeLeft) {
-        return UIInterfaceOrientationLandscapeRight;
+        return UIInterfaceOrientationLandscapeLeft;
     }
     if (deviceOrientation == UIDeviceOrientationLandscapeRight) {
-        return UIInterfaceOrientationLandscapeLeft;
+        return UIInterfaceOrientationLandscapeRight;
     }
     if (deviceOrientation == UIDeviceOrientationPortraitUpsideDown) {
         return UIInterfaceOrientationPortraitUpsideDown;
@@ -195,26 +195,6 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
 
     return selectedOrientation;
 }
-
-@interface TouchIndicatorRootViewController : UIViewController
-@end
-
-@implementation TouchIndicatorRootViewController
-- (BOOL)shouldAutorotate
-{
-    return NO;
-}
-
-- (UIInterfaceOrientationMask)supportedInterfaceOrientations
-{
-    return UIInterfaceOrientationMaskPortrait;
-}
-
-- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation
-{
-    return UIInterfaceOrientationPortrait;
-}
-@end
 
 void report_memory(void) {
   struct task_basic_info info;
@@ -517,7 +497,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
                 _window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screenBoundsWidth, screenBoundsHeight)];
             }
             _window.windowLevel = UIWindowLevelAlert + 2;
-            _window.rootViewController = [[TouchIndicatorRootViewController alloc] init];
+            _window.rootViewController = [[UIViewController alloc] init];
             [_window setBackgroundColor:[UIColor clearColor]];
             [_window setUserInteractionEnabled:NO];
             [_window setAutoresizingMask:18];
