@@ -196,6 +196,26 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     return selectedOrientation;
 }
 
+@interface TouchIndicatorRootViewController : UIViewController
+@end
+
+@implementation TouchIndicatorRootViewController
+- (BOOL)shouldAutorotate
+{
+    return NO;
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations
+{
+    return UIInterfaceOrientationMaskPortrait;
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation
+{
+    return UIInterfaceOrientationPortrait;
+}
+@end
+
 void report_memory(void) {
   struct task_basic_info info;
   mach_msg_type_number_t size = TASK_BASIC_INFO_COUNT;
@@ -423,6 +443,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
                 logNextWindowGeometry = YES;
                 cachedOrientation = currentIndicatorOrientation();
             }
+
             UIInterfaceOrientation ori = cachedInputOrientation;
             CGSize canvasSize = stableCanvasSizeForOrientation(cachedOrientation);
             CGFloat W = canvasSize.width, H = canvasSize.height;
@@ -470,7 +491,6 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
 @implementation TouchIndicatorWindow
 {
     UIWindow *_window;
-    id _orientationObserver;
     //TouchIndicatorViewList* indicatorViewList;
     TouchIndicatorView* touchIndicatorViewList[20];
     TouchIndicatorCoordinateView* coordinateView[20];
@@ -497,26 +517,11 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
                 _window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screenBoundsWidth, screenBoundsHeight)];
             }
             _window.windowLevel = UIWindowLevelAlert + 2;
-            _window.rootViewController = [[UIViewController alloc] init];
+            _window.rootViewController = [[TouchIndicatorRootViewController alloc] init];
             [_window setBackgroundColor:[UIColor clearColor]];
             [_window setUserInteractionEnabled:NO];
             [_window setAutoresizingMask:18];
             [self updateWindowFrameForOrientation:cachedOrientation];
-            [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-            _orientationObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIDeviceOrientationDidChangeNotification
-                object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *note) {
-                    NSString *bundleIdentifier = frontMostAppBundleIdentifier();
-                    if (frontMostAppSupportsLandscape(bundleIdentifier)) return;
-
-                    _window.hidden = YES;
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.65 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                        if (touchIndicatorWindow == self && isShowing) {
-                            cachedOrientation = UIInterfaceOrientationPortrait;
-                            [self updateWindowFrameForOrientation:cachedOrientation];
-                            _window.hidden = NO;
-                        }
-                    });
-                }];
 
             indicatorColor = [UIColor colorWithRed:255 green:0 blue:0 alpha:0.5];
             //init indicator view list
@@ -532,13 +537,6 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
         });
     }
     return self;
-}
-
-- (void)dealloc {
-    if (_orientationObserver) {
-        [[NSNotificationCenter defaultCenter] removeObserver:_orientationObserver];
-        _orientationObserver = nil;
-    }
 }
 
 
