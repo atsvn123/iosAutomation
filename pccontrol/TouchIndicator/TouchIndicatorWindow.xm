@@ -169,7 +169,7 @@ static BOOL isValidInterfaceOrientation(int orientation)
 static UIInterfaceOrientation inputOrientationForDeviceOrientation(UIDeviceOrientation deviceOrientation)
 {
     if (deviceOrientation == UIDeviceOrientationLandscapeLeft) {
-        return UIInterfaceOrientationLandscapeRight;
+        return UIInterfaceOrientationPortrait;
     }
     if (deviceOrientation == UIDeviceOrientationLandscapeRight) {
         return UIInterfaceOrientationLandscapeLeft;
