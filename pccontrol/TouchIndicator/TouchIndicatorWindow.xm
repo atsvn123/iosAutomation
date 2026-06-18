@@ -161,10 +161,10 @@ static BOOL frontMostAppSupportsLandscape(NSString *bundleIdentifier)
 static UIInterfaceOrientation inputOrientationForDeviceOrientation(UIDeviceOrientation deviceOrientation)
 {
     if (deviceOrientation == UIDeviceOrientationLandscapeLeft) {
-        return UIInterfaceOrientationLandscapeLeft;
+        return UIInterfaceOrientationLandscapeRight;
     }
     if (deviceOrientation == UIDeviceOrientationLandscapeRight) {
-        return UIInterfaceOrientationLandscapeRight;
+        return UIInterfaceOrientationLandscapeLeft;
     }
     if (deviceOrientation == UIDeviceOrientationPortraitUpsideDown) {
         return UIInterfaceOrientationPortraitUpsideDown;
