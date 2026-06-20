@@ -132,6 +132,9 @@
         } else if ([extension isEqualToString:@"md"] || [extension isEqualToString:@"markdown"]) {
             [[self activeIconView] setImage:[self symbolNamed:@"doc.richtext" fallback:@"normal-file-icon"]];
             [self activeIconView].tintColor = [UIColor systemPurpleColor];
+        } else if ([extension isEqualToString:@"png"] || [extension isEqualToString:@"jpg"] || [extension isEqualToString:@"jpeg"] || [extension isEqualToString:@"gif"]) {
+            [[self activeIconView] setImage:[self symbolNamed:@"photo" fallback:@"normal-file-icon"]];
+            [self activeIconView].tintColor = [UIColor systemTealColor];
         } else {
             [[self activeIconView] setImage:[self symbolNamed:@"doc" fallback:@"normal-file-icon"]];
             [self activeIconView].tintColor = [UIColor secondaryLabelColor];

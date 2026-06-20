@@ -44,6 +44,8 @@
 		<string>UsleepIntent</string>
 		<string>WaitIntent</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ZXTouch imports selected images into script folders for image matching and other script assets.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

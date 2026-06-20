@@ -10,9 +10,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface AdderPopOverViewController : UIViewController<UIPopoverPresentationControllerDelegate>
+@interface AdderPopOverViewController : UIViewController<UIPopoverPresentationControllerDelegate, UIDocumentPickerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate>
 - (IBAction)createFolderButtonClick:(id)sender;
 - (IBAction)createScriptButtonClick:(id)sender;
+- (IBAction)importFileButtonClick:(id)sender;
+- (IBAction)importImageButtonClick:(id)sender;
 
 - (void)setFolder:(NSString*)path;
 - (void)setUpperLevelViewController:(ScriptListViewController*)vc;

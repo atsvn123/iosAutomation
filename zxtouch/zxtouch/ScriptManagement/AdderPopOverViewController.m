@@ -7,6 +7,7 @@
 
 #import "AdderPopOverViewController.h"
 #import "Util.h"
+#import <MobileCoreServices/MobileCoreServices.h>
 
 @interface AdderPopOverViewController ()
 
@@ -25,7 +26,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.preferredContentSize = CGSizeMake(300, 100);
+    self.preferredContentSize = CGSizeMake(300, 200);
     // Do any additional setup after loading the view from its nib.
 }
 
@@ -171,5 +172,125 @@
     }];
 
     [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (NSString *)availableDestinationPathForFileName:(NSString *)fileName {
+    NSString *cleanName = [fileName lastPathComponent];
+    if (cleanName.length == 0) {
+        cleanName = @"Imported File";
+    }
+
+    NSString *base = [cleanName stringByDeletingPathExtension];
+    NSString *extension = [cleanName pathExtension];
+    NSString *candidate = [currentFolder stringByAppendingPathComponent:cleanName];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSInteger index = 2;
+
+    while ([fileManager fileExistsAtPath:candidate]) {
+        NSString *nextName = extension.length
+            ? [NSString stringWithFormat:@"%@ %ld.%@", base, (long)index, extension]
+            : [NSString stringWithFormat:@"%@ %ld", base, (long)index];
+        candidate = [currentFolder stringByAppendingPathComponent:nextName];
+        index += 1;
+    }
+
+    return candidate;
+}
+
+- (void)finishImportWithError:(NSError *)err destination:(NSString *)destinationPath {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (err) {
+            [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"Import failed: %@", err.localizedDescription] buttonString:@"OK"];
+            return;
+        }
+
+        [self->upperLevel refreshTable];
+        [Util showAlertBoxWithOneOption:self title:@"Imported" message:[NSString stringWithFormat:@"%@ was added.", [destinationPath lastPathComponent]] buttonString:@"OK"];
+    });
+}
+
+- (IBAction)importFileButtonClick:(id)sender {
+    if (!self->currentFolder) {
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:@"OK"];
+        return;
+    }
+
+    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:@[(NSString *)kUTTypeItem] inMode:UIDocumentPickerModeImport];
+    picker.delegate = self;
+    picker.modalPresentationStyle = UIModalPresentationFormSheet;
+    [self presentViewController:picker animated:YES completion:nil];
+}
+
+- (IBAction)importImageButtonClick:(id)sender {
+    if (!self->currentFolder) {
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:@"OK"];
+        return;
+    }
+
+    if (![UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypePhotoLibrary]) {
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:@"Photo Library is not available." buttonString:@"OK"];
+        return;
+    }
+
+    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+    picker.delegate = self;
+    picker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+    picker.mediaTypes = @[(NSString *)kUTTypeImage];
+    picker.modalPresentationStyle = UIModalPresentationFormSheet;
+    [self presentViewController:picker animated:YES completion:nil];
+}
+
+- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
+    NSURL *url = urls.firstObject;
+    if (!url) {
+        return;
+    }
+
+    BOOL didAccess = [url startAccessingSecurityScopedResource];
+    NSString *destinationPath = [self availableDestinationPathForFileName:url.lastPathComponent];
+    NSError *err = nil;
+    [[NSFileManager defaultManager] copyItemAtURL:url toURL:[NSURL fileURLWithPath:destinationPath] error:&err];
+    if (didAccess) {
+        [url stopAccessingSecurityScopedResource];
+    }
+
+    [self finishImportWithError:err destination:destinationPath];
+}
+
+- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentAtURL:(NSURL *)url {
+    [self documentPicker:controller didPickDocumentsAtURLs:@[url]];
+}
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey,id> *)info {
+    UIImage *image = info[UIImagePickerControllerOriginalImage];
+    NSURL *imageURL = info[UIImagePickerControllerImageURL];
+    NSString *fileName = imageURL.lastPathComponent.length ? imageURL.lastPathComponent : @"Imported Image.png";
+    NSString *destinationPath = [self availableDestinationPathForFileName:fileName];
+
+    NSError *err = nil;
+    NSData *imageData = nil;
+    NSString *extension = [[destinationPath pathExtension] lowercaseString];
+    if ([extension isEqualToString:@"jpg"] || [extension isEqualToString:@"jpeg"]) {
+        imageData = UIImageJPEGRepresentation(image, 0.92);
+    } else {
+        if (extension.length == 0) {
+            destinationPath = [destinationPath stringByAppendingPathExtension:@"png"];
+        }
+        imageData = UIImagePNGRepresentation(image);
+    }
+
+    if (!imageData) {
+        err = [NSError errorWithDomain:@"ZXTouchImport" code:1 userInfo:@{NSLocalizedDescriptionKey: @"Could not read the selected image."}];
+    } else {
+        [imageData writeToFile:destinationPath options:NSDataWritingAtomic error:&err];
+    }
+
+    [picker dismissViewControllerAnimated:YES completion:^{
+        [self finishImportWithError:err destination:destinationPath];
+    }];
+}
+
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+    [picker dismissViewControllerAnimated:YES completion:nil];
 }
 @end
