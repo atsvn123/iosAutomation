@@ -56,6 +56,17 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     ConfigManager *configManager;
 }
 
+- (BOOL)darkModeEnabled {
+    id configValue = [configManager getValueFromKey:@"dark_mode"];
+    if (configValue) {
+        return [configValue boolValue];
+    }
+    BOOL legacyValue = [[NSUserDefaults standardUserDefaults] boolForKey:@"dark_mode"];
+    [configManager updateKey:@"dark_mode" forValue:@(legacyValue)];
+    [configManager save];
+    return legacyValue;
+}
+
 - (NSString *)triggerActionTitle:(NSString *)action {
     if ([action isEqualToString:ZX_ACTION_TOGGLE_PANEL]) return @"Toggle Panel";
     if ([action isEqualToString:ZX_ACTION_STOP_SCRIPT]) return @"Stop Script";
@@ -163,7 +174,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         switchAppBeforeRunScript = [[configManager getValueFromKey:@"switch_app_before_run_script"] boolValue];
     }
 
-    BOOL darkMode = [[NSUserDefaults standardUserDefaults] boolForKey:@"dark_mode"];
+    BOOL darkMode = [self darkModeEnabled];
 
     // [@{"type": ?, @"title": ?, @"content": ?, ... more depends on the cell type}]
     //
@@ -205,6 +216,13 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     _tableView.separatorInset = UIEdgeInsetsMake(0, 52, 0, 0);
 }
 
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    if (configManager) {
+        [self reloadSettingsModel];
+    }
+}
+
 - (void)reloadSettingsModel {
     configManager = [[ConfigManager alloc] initWithPath:SPRINGBOARD_CONFIG_PATH];
     BOOL doubleClickPopup = YES;
@@ -213,7 +231,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     BOOL switchAppBeforeRunScript = YES;
     if ([configManager getValueFromKey:@"switch_app_before_run_script"])
         switchAppBeforeRunScript = [[configManager getValueFromKey:@"switch_app_before_run_script"] boolValue];
-    BOOL darkMode = [[NSUserDefaults standardUserDefaults] boolForKey:@"dark_mode"];
+    BOOL darkMode = [self darkModeEnabled];
 
     sections = @[NSLocalizedString(@"remoteManagement", nil), NSLocalizedString(@"control", nil), @"Automation", NSLocalizedString(@"script", nil), @"Appearance", @"About"];
     cellsForEachSection = @[
@@ -464,6 +482,9 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 
 - (void)handleDarkModeToggle:(UISwitch*)s {
     BOOL dark = [s isOn];
+    [configManager updateKey:@"dark_mode" forValue:@(dark)];
+    [configManager save];
+
     [[NSUserDefaults standardUserDefaults] setBool:dark forKey:@"dark_mode"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 
@@ -478,12 +499,6 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
             }
         }
     }
-
-    // Persist to tweak config so the panel can read it
-    NSMutableDictionary *tweakConfig = [NSMutableDictionary dictionaryWithContentsOfFile:SPRINGBOARD_CONFIG_PATH];
-    if (!tweakConfig) tweakConfig = [NSMutableDictionary dictionary];
-    tweakConfig[@"dark_mode"] = @(dark);
-    [tweakConfig writeToFile:SPRINGBOARD_CONFIG_PATH atomically:YES];
 
     // Notify SpringBoard to apply dark mode to the panel (command 903)
     Socket *socket = [[Socket alloc] init];
@@ -618,6 +633,10 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 // Override to support editing the table view.
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
 
+}
+
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+    return NO;
 }
 
 

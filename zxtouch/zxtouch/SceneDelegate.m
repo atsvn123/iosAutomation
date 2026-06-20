@@ -6,6 +6,7 @@
 //
 
 #import "SceneDelegate.h"
+#import "Config.h"
 
 @interface SceneDelegate ()
 
@@ -13,10 +14,21 @@
 
 @implementation SceneDelegate
 
+- (BOOL)darkModeEnabled {
+    NSDictionary *config = [NSDictionary dictionaryWithContentsOfFile:SPRINGBOARD_CONFIG_PATH];
+    id configValue = config[@"dark_mode"];
+    if (configValue) {
+        BOOL dark = [configValue boolValue];
+        [[NSUserDefaults standardUserDefaults] setBool:dark forKey:@"dark_mode"];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        return dark;
+    }
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"dark_mode"];
+}
 
 - (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)connectionOptions {
     // Apply saved dark mode preference when the window is ready
-    BOOL darkMode = [[NSUserDefaults standardUserDefaults] boolForKey:@"dark_mode"];
+    BOOL darkMode = [self darkModeEnabled];
     UIUserInterfaceStyle style = darkMode ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
     if ([scene isKindOfClass:[UIWindowScene class]]) {
         for (UIWindow *win in ((UIWindowScene *)scene).windows) {

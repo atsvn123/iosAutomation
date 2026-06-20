@@ -25,6 +25,61 @@
     Socket *springBoardSocket;
 }
 
+- (NSMutableDictionary *)defaultTouchIndicatorConfig {
+    return [@{
+        @"show": @(NO),
+        @"show_coordinates": @(YES),
+        @"color": [@{
+            @"alpha": @(TOUCH_INDICATOR_DEFAULT_ALPHA),
+            @"r": @(255),
+            @"g": @(0),
+            @"b": @(0)
+        } mutableCopy]
+    } mutableCopy];
+}
+
+- (void)loadConfig {
+    config = [NSMutableDictionary dictionaryWithContentsOfFile:SPRINGBOARD_CONFIG_PATH];
+    if (!config) config = [NSMutableDictionary dictionary];
+
+    NSDictionary *existingTouchConfig = config[@"touch_indicator"];
+    NSMutableDictionary *touchConfig = [existingTouchConfig isKindOfClass:[NSDictionary class]] ? [existingTouchConfig mutableCopy] : [self defaultTouchIndicatorConfig];
+
+    NSDictionary *existingColorConfig = touchConfig[@"color"];
+    NSMutableDictionary *colorConfig = [existingColorConfig isKindOfClass:[NSDictionary class]] ? [existingColorConfig mutableCopy] : [NSMutableDictionary dictionary];
+    if (!colorConfig[@"alpha"]) colorConfig[@"alpha"] = @(TOUCH_INDICATOR_DEFAULT_ALPHA);
+    if (!colorConfig[@"r"]) colorConfig[@"r"] = @(255);
+    if (!colorConfig[@"g"]) colorConfig[@"g"] = @(0);
+    if (!colorConfig[@"b"]) colorConfig[@"b"] = @(0);
+
+    if (!touchConfig[@"show"]) touchConfig[@"show"] = @(NO);
+    if (!touchConfig[@"show_coordinates"]) touchConfig[@"show_coordinates"] = @(YES);
+    touchConfig[@"color"] = colorConfig;
+    config[@"touch_indicator"] = touchConfig;
+    isShowing = [touchConfig[@"show"] boolValue];
+
+    [config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:YES];
+}
+
+- (NSMutableDictionary *)touchIndicatorConfig {
+    NSMutableDictionary *touchConfig = config[@"touch_indicator"];
+    if (![touchConfig isKindOfClass:[NSMutableDictionary class]]) {
+        [self loadConfig];
+        touchConfig = config[@"touch_indicator"];
+    }
+    return touchConfig;
+}
+
+- (void)saveConfigAndReloadIndicator:(BOOL)reload {
+    if (![config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:YES]) {
+        [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Unable to write touch indicator settings." buttonString:@"OK"];
+        return;
+    }
+    if (reload && isShowing) {
+        [springBoardSocket send:@"262\r\n"];
+    }
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
@@ -39,39 +94,22 @@
     UINib *sliderCellNib = [UINib nibWithNibName:@"TableViewCellWithSlider" bundle:nil];
     [_tableView registerNib:sliderCellNib forCellReuseIdentifier:@"SliderCell"];
     
-    // change plist
-    if (![[NSFileManager defaultManager] fileExistsAtPath:SPRINGBOARD_CONFIG_PATH])
-    {
-        config = [[NSMutableDictionary alloc] initWithDictionary:@{@"touch_indicator":@{@"show": @(0), @"color":@{@"alpha": @(TOUCH_INDICATOR_DEFAULT_ALPHA), @"r": @(255), @"g": @(0), @"b": @(0)}}}];
-        [config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:NO];
-    }
-
-    config = [[NSMutableDictionary alloc] initWithContentsOfFile:SPRINGBOARD_CONFIG_PATH];
-    
-    if (!config[@"touch_indicator"])
-    {
-        [config setValue:@{@"show": @(0), @"color":@{@"alpha": @(TOUCH_INDICATOR_DEFAULT_ALPHA), @"r": @(255), @"g": @(0), @"b": @(0)}} forKey:@"touch_indicator"];
-        [config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:NO];
-    }
-    
-    isShowing = [config[@"touch_indicator"][@"show"] boolValue];
-    // ensure show_coordinates key exists
-    if (!config[@"touch_indicator"][@"show_coordinates"]) {
-        [config[@"touch_indicator"] setObject:@(YES) forKey:@"show_coordinates"];
-        [config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:NO];
-    }
+    [self loadConfig];
     
     springBoardSocket = [[Socket alloc] init];
     [springBoardSocket connect:@"127.0.0.1" byPort:6000];
 }
 
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [self loadConfig];
+    [_tableView reloadData];
+}
+
 - (void)switchCoordinatesStatus:(id)sender {
     UISwitch *s = (UISwitch*)sender;
-    [config[@"touch_indicator"] setObject:@([s isOn]) forKey:@"show_coordinates"];
-    [config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:NO];
-    if (isShowing) {
-        [springBoardSocket send:@"262\r\n"];  // reload config
-    }
+    [self touchIndicatorConfig][@"show_coordinates"] = @([s isOn]);
+    [self saveConfigAndReloadIndicator:YES];
 }
 
 - (void)alphaValueChanged:(id)sender {
@@ -85,12 +123,9 @@
         return;
     }
     
-    config[@"touch_indicator"][@"color"][@"alpha"] = @(slider.value);
-    
-    [config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:NO];
-    
-    
-    [springBoardSocket send:@"262\r\n"];
+    NSMutableDictionary *colorConfig = [self touchIndicatorConfig][@"color"];
+    colorConfig[@"alpha"] = @(slider.value);
+    [self saveConfigAndReloadIndicator:YES];
 }
 
 - (void)switchTouchIndicatorStatus:(id)sender {
@@ -105,8 +140,7 @@
     if ([s isOn])
     {
         if (config)
-            //config[@"touch_indicator"][@"show"] = @(true);
-            [config[@"touch_indicator"] setObject:@(true) forKey:@"show"];
+            [self touchIndicatorConfig][@"show"] = @(YES);
 
         // turn on
         [springBoardSocket send:@"261\r\n"];
@@ -116,7 +150,7 @@
     else
     {
         if (config)
-            [config[@"touch_indicator"] setObject:@(false) forKey:@"show"];
+            [self touchIndicatorConfig][@"show"] = @(NO);
 
         // turn off
         [springBoardSocket send:@"260\r\n"];
@@ -124,7 +158,7 @@
         isShowing = false;
     }
 
-    if (![config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:NO])
+    if (![config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:YES])
     {
         [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Although success, the configuration file cannot be written." buttonString:@"OK"];
     }
@@ -171,9 +205,10 @@
         
         [cell setTitleText:NSLocalizedString(@"touchIndicator", nil)];
 
+        [cell.switchBtn removeTarget:nil action:NULL forControlEvents:UIControlEventValueChanged];
         [cell.switchBtn addTarget:self action:@selector(switchTouchIndicatorStatus:) forControlEvents:UIControlEventValueChanged];
         
-        if ([config[@"touch_indicator"][@"show"] boolValue])
+        if ([[self touchIndicatorConfig][@"show"] boolValue])
         {
             [cell.switchBtn setOn:YES];
         }
@@ -186,14 +221,14 @@
     }
     else if (indexPath.row == 1)
     {
-        static NSString *cellID2 = @"SwitchCell2";
         TableViewCellWithSwitch *cell = [tableView dequeueReusableCellWithIdentifier:@"SwitchCell"];
         if (cell == nil) {
             cell = [[TableViewCellWithSwitch alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"SwitchCell"];
         }
         [cell setTitleText:@"Show Coordinates"];
+        [cell.switchBtn removeTarget:nil action:NULL forControlEvents:UIControlEventValueChanged];
         [cell.switchBtn addTarget:self action:@selector(switchCoordinatesStatus:) forControlEvents:UIControlEventValueChanged];
-        BOOL showCoords = config[@"touch_indicator"][@"show_coordinates"] ? [config[@"touch_indicator"][@"show_coordinates"] boolValue] : YES;
+        BOOL showCoords = [[self touchIndicatorConfig][@"show_coordinates"] boolValue];
         [cell.switchBtn setOn:showCoords];
         result = cell;
     }
@@ -212,11 +247,12 @@
         cell.slideBar.maximumValue = 1.0f;
         cell.slideBar.minimumValue = 0.0f;
         cell.slideBar.continuous = YES;
+        [cell.slideBar removeTarget:nil action:NULL forControlEvents:UIControlEventValueChanged];
         [cell.slideBar addTarget:self
               action:@selector(alphaValueChanged:)
               forControlEvents:UIControlEventValueChanged];
         
-        cell.slideBar.value = [config[@"touch_indicator"][@"color"][@"alpha"] floatValue];
+        cell.slideBar.value = [[self touchIndicatorConfig][@"color"][@"alpha"] floatValue];
         cell.value.text = [NSString stringWithFormat:@"%.1f", cell.slideBar.value];
 
         result = cell;
@@ -256,11 +292,12 @@ numberOfRowsInComponent:(NSInteger)component {
 
     [colors[row] getRed:&red green:&green blue:&blue alpha:&alpha];
 
-    config[@"touch_indicator"][@"color"][@"r"] = @(red*255);
-    config[@"touch_indicator"][@"color"][@"g"] = @(green*255);
-    config[@"touch_indicator"][@"color"][@"b"] = @(blue*255);
+    NSMutableDictionary *colorConfig = [self touchIndicatorConfig][@"color"];
+    colorConfig[@"r"] = @(red*255);
+    colorConfig[@"g"] = @(green*255);
+    colorConfig[@"b"] = @(blue*255);
         
-    if (![config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:NO])
+    if (![config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:YES])
     {
         [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Cannot set color. Unable to write configuration file" buttonString:@"OK"];
         return;
