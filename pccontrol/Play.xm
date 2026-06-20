@@ -6,6 +6,7 @@
 #include "Config.h"
 #import "ScriptPlayer.h"
 #include "Common.h"
+#import <CoreFoundation/CoreFoundation.h>
 
 static BOOL switchAppBeforeRunScript = true;
 ScriptPlayer *scriptPlayer;
@@ -93,6 +94,11 @@ BOOL isScriptPlaying()
 
 void playHasStoppedCallBack()
 {
+    if (CFAbsoluteTimeGetCurrent() - lastAlertBoxRequestTime() < 4.0) {
+        NSLog(@"com.zjx.springboard: skipping Script Finished popup because script recently showed an alert.");
+        return;
+    }
+
     NSString *bundlePath = [scriptPlayer getCurrentBundlePath];
     NSString *scriptName = (bundlePath.length > 0) ? [[bundlePath lastPathComponent] stringByDeletingPathExtension] : @"Unknown";
     int completedRuns = [scriptPlayer getCompletedRuns];
