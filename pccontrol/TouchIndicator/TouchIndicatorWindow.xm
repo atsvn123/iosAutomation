@@ -47,6 +47,25 @@ static TouchIndicatorWindow *touchIndicatorWindow;
 static BOOL logNextIndicatorOrientation = NO;
 static BOOL logNextWindowGeometry = NO;
 
+@interface ZXTouchIndicatorRootViewController : UIViewController
+@end
+
+@implementation ZXTouchIndicatorRootViewController
+
+- (BOOL)shouldAutorotate {
+    return NO;
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+    return UIInterfaceOrientationMaskPortrait;
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation {
+    return UIInterfaceOrientationPortrait;
+}
+
+@end
+
 static void appendTouchIndicatorDebugLog(NSString *message)
 {
     NSString *logPath = @"/var/mobile/Library/ZXTouch/logs/orientation-debug.log";
@@ -213,7 +232,11 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     } else if (!supportsLandscape && (frontOrientation == UIInterfaceOrientationPortrait || frontOrientation == UIInterfaceOrientationPortraitUpsideDown)) {
         selectedOrientation = (UIInterfaceOrientation)frontOrientation;
     }
-    cachedInputOrientation = isValidInterfaceOrientation((int)deviceOrientation) ? (UIInterfaceOrientation)deviceOrientation : selectedOrientation;
+    if (supportsLandscape && isValidInterfaceOrientation((int)deviceOrientation)) {
+        cachedInputOrientation = (UIInterfaceOrientation)deviceOrientation;
+    } else {
+        cachedInputOrientation = selectedOrientation;
+    }
     cachedMirrorInputX = NO;
 
     if (logNextIndicatorOrientation) {
@@ -496,8 +519,12 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
 - (void)updateWindowFrameForOrientation:(UIInterfaceOrientation)orientation {
     CGSize canvasSize = stableCanvasSizeForOrientation(orientation);
     [UIView performWithoutAnimation:^{
+        _window.transform = CGAffineTransformIdentity;
         _window.frame = CGRectMake(0, 0, canvasSize.width, canvasSize.height);
+        _window.bounds = CGRectMake(0, 0, canvasSize.width, canvasSize.height);
+        _window.center = CGPointMake(canvasSize.width / 2.0f, canvasSize.height / 2.0f);
         _window.rootViewController.view.frame = _window.bounds;
+        _window.rootViewController.view.transform = CGAffineTransformIdentity;
     }];
 }
 
@@ -513,10 +540,11 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
                 _window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screenBoundsWidth, screenBoundsHeight)];
             }
             _window.windowLevel = UIWindowLevelAlert + 2;
-            _window.rootViewController = [[UIViewController alloc] init];
+            _window.rootViewController = [[ZXTouchIndicatorRootViewController alloc] init];
             [_window setBackgroundColor:[UIColor clearColor]];
             [_window setUserInteractionEnabled:NO];
-            [_window setAutoresizingMask:18];
+            [_window setAutoresizingMask:UIViewAutoresizingNone];
+            _window.clipsToBounds = NO;
             [self updateWindowFrameForOrientation:cachedOrientation];
 
             indicatorColor = [UIColor colorWithRed:255 green:0 blue:0 alpha:0.5];
@@ -609,7 +637,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
 - (void) show {
     dispatch_async(dispatch_get_main_queue(), ^{
         [self updateWindowFrameForOrientation:cachedOrientation];
-        _window.autoresizingMask = UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin;
+        _window.autoresizingMask = UIViewAutoresizingNone;
         _window.hidden = NO;
     });
 }

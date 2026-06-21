@@ -102,3 +102,14 @@ LDID=$(jbroot /usr/bin/ldid)
 if [ -x "$LDID" ]; then
     "$LDID" -S/tmp/zxtouch-ent.plist "$APP/zxtouch"
 fi
+
+# Reload SpringBoard so the updated tweak dylib is actually loaded.
+SBRELOAD=$(jbroot /usr/bin/sbreload 2>/dev/null)
+KILLALL=$(jbroot /usr/bin/killall 2>/dev/null)
+if [ -x "$SBRELOAD" ]; then
+    "$SBRELOAD"
+elif [ -x "$KILLALL" ]; then
+    "$KILLALL" -9 SpringBoard
+else
+    killall -9 SpringBoard 2>/dev/null || true
+fi
