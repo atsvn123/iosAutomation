@@ -186,39 +186,6 @@ static BOOL isValidInterfaceOrientation(int orientation)
            orientation == UIInterfaceOrientationLandscapeRight;
 }
 
-static CGPoint portraitPointFromInputPoint(CGFloat x, CGFloat y, UIInterfaceOrientation inputOrientation)
-{
-    switch (inputOrientation) {
-        case UIInterfaceOrientationLandscapeLeft:
-            return CGPointMake(y, 1.0f - x);
-        case UIInterfaceOrientationLandscapeRight:
-            return CGPointMake(1.0f - y, x);
-        case UIInterfaceOrientationPortraitUpsideDown:
-            return CGPointMake(1.0f - x, 1.0f - y);
-        default:
-            return CGPointMake(x, y);
-    }
-}
-
-static CGPoint drawPointFromPortraitPoint(CGPoint portraitPoint, UIInterfaceOrientation drawOrientation, CGSize canvasSize)
-{
-    CGFloat x = portraitPoint.x;
-    CGFloat y = portraitPoint.y;
-    CGFloat W = canvasSize.width;
-    CGFloat H = canvasSize.height;
-
-    switch (drawOrientation) {
-        case UIInterfaceOrientationLandscapeLeft:
-            return CGPointMake((1.0f - y) * W, x * H);
-        case UIInterfaceOrientationLandscapeRight:
-            return CGPointMake(y * W, (1.0f - x) * H);
-        case UIInterfaceOrientationPortraitUpsideDown:
-            return CGPointMake((1.0f - x) * W, (1.0f - y) * H);
-        default:
-            return CGPointMake(x * W, y * H);
-    }
-}
-
 static UIInterfaceOrientation currentIndicatorOrientation(void)
 {
     NSString *bundleIdentifier = frontMostAppBundleIdentifier();
@@ -478,19 +445,36 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
                 cachedOrientation = currentIndicatorOrientation();
             }
 
-            CGSize canvasSize = stableCanvasSizeForOrientation(cachedOrientation);
-            CGPoint portraitPoint = portraitPointFromInputPoint(x, y, cachedInputOrientation);
-            CGPoint drawPoint = drawPointFromPortraitPoint(portraitPoint, cachedOrientation, canvasSize);
-            xOnScreen = drawPoint.x;
-            yOnScreen = drawPoint.y;
+            UIInterfaceOrientation ori = cachedOrientation;
+            CGSize canvasSize = stableCanvasSizeForOrientation(ori);
+            CGFloat W = canvasSize.width, H = canvasSize.height;
+
+            switch (ori) {
+                case UIInterfaceOrientationLandscapeLeft:
+                    xOnScreen = (1.0f - y) * W;
+                    yOnScreen = x * H;
+                    break;
+                case UIInterfaceOrientationLandscapeRight:
+                    xOnScreen = y * W;
+                    yOnScreen = (1.0f - x) * H;
+                    break;
+                case UIInterfaceOrientationPortraitUpsideDown:
+                    xOnScreen = (1.0f - x) * W;
+                    yOnScreen = (1.0f - y) * H;
+                    break;
+                default:
+                    xOnScreen = x * W;
+                    yOnScreen = y * H;
+                    break;
+            }
             if (cachedMirrorInputX) {
-                xOnScreen = canvasSize.width - xOnScreen;
+                xOnScreen = W - xOnScreen;
             }
 
             if ( touch == 1 && eventMask & 2 )
             {
-                NSString *message = [NSString stringWithFormat:@"touch raw=[%.4f %.4f] portrait=[%.4f %.4f] screen=[%.1f %.1f] canvas=[%.1f %.1f] drawOri=%ld inputOri=%ld\n",
-                                     x, y, portraitPoint.x, portraitPoint.y, xOnScreen, yOnScreen, canvasSize.width, canvasSize.height, (long)cachedOrientation, (long)cachedInputOrientation];
+                NSString *message = [NSString stringWithFormat:@"touch raw=[%.4f %.4f] screen=[%.1f %.1f] canvas=[%.1f %.1f] ori=%ld inputOri=%ld\n",
+                                     x, y, xOnScreen, yOnScreen, W, H, (long)ori, (long)cachedInputOrientation];
                 appendTouchIndicatorDebugLog(message);
                 [touchIndicatorWindow showIndicator:index withX:xOnScreen andY:yOnScreen majorRadius:majorRadius];
             }
