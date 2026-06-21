@@ -46,7 +46,6 @@ static CGFloat scale = 0;
 static TouchIndicatorWindow *touchIndicatorWindow;
 static BOOL logNextIndicatorOrientation = NO;
 static BOOL logNextWindowGeometry = NO;
-static BOOL cachedFrontAppSupportsLandscape = YES;
 
 @interface ZXTouchIndicatorRootViewController : UIViewController
 @end
@@ -54,15 +53,15 @@ static BOOL cachedFrontAppSupportsLandscape = YES;
 @implementation ZXTouchIndicatorRootViewController
 
 - (BOOL)shouldAutorotate {
-    return cachedFrontAppSupportsLandscape;
+    return NO;
 }
 
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations {
-    return cachedFrontAppSupportsLandscape ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskPortrait;
+    return UIInterfaceOrientationMaskPortrait;
 }
 
 - (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation {
-    return cachedFrontAppSupportsLandscape ? cachedOrientation : UIInterfaceOrientationPortrait;
+    return UIInterfaceOrientationPortrait;
 }
 
 @end
@@ -224,8 +223,6 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
 {
     NSString *bundleIdentifier = frontMostAppBundleIdentifier();
     BOOL supportsLandscape = frontMostAppSupportsLandscape(bundleIdentifier);
-    BOOL previousSupportsLandscape = cachedFrontAppSupportsLandscape;
-    cachedFrontAppSupportsLandscape = supportsLandscape;
     int frontOrientation = [Screen getScreenOrientation];
     UIInterfaceOrientation selectedOrientation = UIInterfaceOrientationPortrait;
     UIDeviceOrientation deviceOrientation = [[UIDevice currentDevice] orientation];
@@ -241,12 +238,6 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
         cachedInputOrientation = selectedOrientation;
     }
     cachedMirrorInputX = NO;
-
-    if (previousSupportsLandscape != cachedFrontAppSupportsLandscape) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [UIViewController attemptRotationToDeviceOrientation];
-        });
-    }
 
     if (logNextIndicatorOrientation) {
         NSString *message = [NSString stringWithFormat:@"bundle=%@ supportsLandscape=%d frontOrientation=%d selectedOrientation=%ld inputOrientation=%ld deviceOrientation=%ld mirrorX=%d\n",
