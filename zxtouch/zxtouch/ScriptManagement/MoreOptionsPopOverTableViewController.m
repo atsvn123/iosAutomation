@@ -61,30 +61,40 @@
                                                    handler:^(UIAlertAction * action) {
                                                        if (alert.textFields.count > 0) {
                                                            UITextField *textField = [alert.textFields firstObject];
-                                                           if ([textField.text length] != 0)
+                                                           NSString *cleanName = [[textField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] lastPathComponent];
+                                                           if ([cleanName length] != 0)
                                                            {
 
-                                                               // create folder
                                                                BOOL isDir;
                                                                NSError *err = nil;
                                                                NSFileManager *fileManager= [NSFileManager defaultManager];
                                                                NSString* extension = [self->currentFolder pathExtension];
-                                                               NSString* newFolderPath = [[self->currentFolder stringByDeletingLastPathComponent] stringByAppendingPathComponent:[textField.text stringByAppendingPathExtension:extension]];
-                                                               if([fileManager fileExistsAtPath:newFolderPath isDirectory:&isDir] && isDir)
+                                                               if (extension.length && [[cleanName pathExtension] isEqualToString:extension]) {
+                                                                   cleanName = [cleanName stringByDeletingPathExtension];
+                                                               }
+                                                               NSString *newName = extension.length ? [cleanName stringByAppendingPathExtension:extension] : cleanName;
+                                                               NSString* newFolderPath = [[self->currentFolder stringByDeletingLastPathComponent] stringByAppendingPathComponent:newName];
+                                                               if ([newFolderPath isEqualToString:self->currentFolder])
+                                                               {
+                                                                   [self dismissViewControllerAnimated:YES completion:nil];
+                                                                   return;
+                                                               }
+                                                               if([fileManager fileExistsAtPath:newFolderPath isDirectory:&isDir])
                                                                {
                                                                    [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderAlreadyExists", nil) buttonString:@"OK"];
                                                                }
                                                                else
                                                                {
-                                                                   [fileManager createDirectoryAtPath:newFolderPath withIntermediateDirectories:YES attributes:nil error:&err];
+                                                                   [fileManager moveItemAtPath:self->currentFolder toPath:newFolderPath error:&err];
                                                                    if (err)
                                                                    {
                                                                        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createFolderFailed", nil), err] buttonString:@"OK"];
+                                                                       return;
                                                                    }
-                                                                   
-                                                                   [self moveFromFolder:self->currentFolder to:newFolderPath];
+                                                                   self->currentFolder = newFolderPath;
                                                                    dispatch_async(dispatch_get_main_queue(), ^{
                                                                        [self->upperLevel refreshTable];
+                                                                       [self dismissViewControllerAnimated:YES completion:nil];
                                                                    });
                                                                }
                                                                
@@ -102,7 +112,10 @@
     [alert addAction:submit];
 
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-        //textField.placeholder = @""; // if needs
+        NSString *name = [self->currentFolder lastPathComponent];
+        NSString *extension = [self->currentFolder pathExtension];
+        textField.text = extension.length ? [name stringByDeletingPathExtension] : name;
+        textField.clearButtonMode = UITextFieldViewModeWhileEditing;
     }];
 
     [self presentViewController:alert animated:YES completion:nil];
@@ -128,33 +141,11 @@
 }
 
 - (void)moveFromFolder:(NSString*)source to:(NSString*)dest {
-    NSLog(@"source: %@", source);
-    NSString *oldDirectoryPath = source;
-
-    NSArray *tempArrayForContentsOfDirectory =[[NSFileManager defaultManager] contentsOfDirectoryAtPath:oldDirectoryPath error:nil];
-
-    NSString *newDirectoryPath = dest;
-
-    [[NSFileManager defaultManager] createDirectoryAtPath:newDirectoryPath attributes:nil];
-
     NSError *error = nil;
-
-    for (int i = 0; i < [tempArrayForContentsOfDirectory count]; i++)
-    {
-
-        NSString *newFilePath = [newDirectoryPath stringByAppendingPathComponent:[tempArrayForContentsOfDirectory objectAtIndex:i]];
-
-        NSString *oldFilePath = [oldDirectoryPath stringByAppendingPathComponent:[tempArrayForContentsOfDirectory objectAtIndex:i]];
-
-        [[NSFileManager defaultManager] moveItemAtPath:oldFilePath toPath:newFilePath error:&error];
-
-        if (error) {
-            [Util showAlertBoxWithOneOption:self title:@"Error" message:[NSString stringWithFormat:@"Error while moving files. Error: %@",error] buttonString:@"OK"];
-            
-        }
-
+    [[NSFileManager defaultManager] moveItemAtPath:source toPath:dest error:&error];
+    if (error) {
+        [Util showAlertBoxWithOneOption:self title:@"Error" message:[NSString stringWithFormat:@"Error while moving files. Error: %@",error] buttonString:@"OK"];
     }
-    [[NSFileManager defaultManager] removeItemAtPath:oldDirectoryPath error:nil];
 }
 
 - (void)setUpperLevelViewController:(ScriptListViewController*)vc{
