@@ -22,6 +22,8 @@ This fork has been actively revived for modern rootless jailbreaks. Recent relea
 - Native `prompt_input(...)` support for Python scripts
 - Built-in Activator-style automation triggers
 - Easier script selection for trigger actions, without manually pasting `.bdl` paths
+- Hardened Python runtime setup for fresh installs, including better fallback paths and visible script error diagnostics
+- Floating panel script settings now persist correctly, and turning them off runs scripts once without leaking old repeat values
 
 The built-in automation system currently supports assigning actions to Volume Up, Volume Down, and Home button click patterns. Each trigger can use 1-5 clicks and can run one of these actions:
 
@@ -51,7 +53,7 @@ The built-in automation system currently supports assigning actions to Volume Up
 - **Rebuilt panel UI** — floating script panel with ⚙️ settings popup (repeat / speed / interval), dark mode, orientation-aware layout
 - **Dark mode** — toggle in the app for both the app UI and the panel
 - **Touch indicator coordinates toggle** — show or hide (x, y) labels per finger
-- **Python scripts fully working** — auto-detects Python 3.9/3.10/3.11, fixes broken symlinks, copies module to correct site-packages
+- **Python scripts fully working** - auto-detects Python 3.8-3.11, fixes broken symlinks, uses bundled fallback paths, copies module to correct site-packages, and reports real tracebacks in logs
 - **Color picker & color searcher re-enabled** — reimplemented in pure CoreGraphics
 - **OCR** working via Vision framework
 - **Volume-down stop** working for Python scripts
@@ -59,6 +61,7 @@ The built-in automation system currently supports assigning actions to Volume Up
 - **Refreshed script browser and settings UI** — modern icons, cleaner grouping, README previews, and separate handling for Python/raw scripts
 - **Built-in automation triggers** — assign button click patterns to panel, recording, stop, or run-script actions
 - **Native script prompts** — Python scripts can request user input with `prompt_input(...)`
+- **Panel playback settings fixed** - the panel remembers whether settings mode is enabled and disabling it clears repeat/speed leakage for direct play
 
 ---
 
@@ -67,12 +70,12 @@ The built-in automation system currently supports assigning actions to Volume Up
 ### Dopamine (rootless)
 - iOS 15.0 – 16.6.1
 - [Dopamine](https://ellekit.space/dopamine/) jailbreak
-- Python 3 from Procursus repo (for `.py` scripts) — add `https://apt.procurs.us`
+- Python 3 from Procursus repo is recommended for `.py` scripts. ZXTouch also falls back to the bundled runtime when available.
 
 ### Roothide / Serotonin
 - iOS 15.0 – 16.6.1
 - [Serotonin](https://github.com/roothide/Serotonin) or roothide-compatible jailbreak
-- Python 3 from Procursus repo (for `.py` scripts) — add `https://apt.procurs.us`
+- Python 3 from Procursus repo is recommended for `.py` scripts. ZXTouch also falls back to the bundled runtime when available.
 
 ---
 
