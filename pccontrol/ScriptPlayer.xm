@@ -378,9 +378,11 @@ static NSString *ZXPythonModulePath(void)
                               ZXShellQuote(statusFile)];
     NSLog(@"com.zjx.springboard: command to run for running py file %@", commandToRun);
 
-    int exitCode = system2([commandToRun UTF8String], NULL, NULL);
-    if (exitCode != 0) {
-        NSString *message = [NSString stringWithFormat:@"Python script exited with code %d. Open Logs for the traceback.", exitCode];
+    int shellExitCode = system2([commandToRun UTF8String], NULL, NULL);
+    NSString *statusText = [NSString stringWithContentsOfFile:statusFile encoding:NSUTF8StringEncoding error:nil];
+    int pythonExitCode = statusText ? [statusText intValue] : shellExitCode;
+    if (pythonExitCode != 0) {
+        NSString *message = [NSString stringWithFormat:@"Python script exited with code %d. Open Logs for the traceback.", pythonExitCode];
         NSLog(@"com.zjx.springboard: %@", message);
         showAlertBox(@"Script Error", message, 999);
     }
