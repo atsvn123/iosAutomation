@@ -194,8 +194,13 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     int frontOrientation = [Screen getScreenOrientation];
     UIInterfaceOrientation selectedOrientation = UIInterfaceOrientationPortrait;
     UIDeviceOrientation deviceOrientation = [[UIDevice currentDevice] orientation];
+    BOOL isSpringBoard = !bundleIdentifier || [bundleIdentifier isEqualToString:@"com.apple.springboard"];
 
-    if (supportsLandscape && isValidInterfaceOrientation(frontOrientation)) {
+    if (isSpringBoard && isValidInterfaceOrientation(deviceOrientation)) {
+        // SpringBoard can report the outgoing app's orientation briefly after a
+        // swipe Home. The physical orientation is the authoritative source here.
+        selectedOrientation = (UIInterfaceOrientation)deviceOrientation;
+    } else if (supportsLandscape && isValidInterfaceOrientation(frontOrientation)) {
         selectedOrientation = (UIInterfaceOrientation)frontOrientation;
     }
 
