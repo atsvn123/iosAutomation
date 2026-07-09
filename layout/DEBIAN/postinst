@@ -100,11 +100,7 @@ if [ -x /var/jb/usr/bin/ldid ]; then
     /var/jb/usr/bin/ldid -S/tmp/zxtouch-ent.plist "$APP/zxtouch"
 fi
 
-# Reload SpringBoard so the updated tweak dylib is actually loaded.
-if [ -x /var/jb/usr/bin/sbreload ]; then
-    /var/jb/usr/bin/sbreload
-elif [ -x /var/jb/usr/bin/killall ]; then
-    /var/jb/usr/bin/killall -9 SpringBoard
-else
-    killall -9 SpringBoard 2>/dev/null || true
-fi
+# Never restart SpringBoard from a maintainer script. Package managers run this
+# inside the dpkg transaction, so a restart can kill their helper before dpkg
+# records the package as configured. Sileo can offer a respring after dpkg exits.
+exit 0

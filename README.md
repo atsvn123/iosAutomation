@@ -27,6 +27,7 @@ This fork has been actively revived for modern rootless jailbreaks. Recent relea
 - Built-in recording editor for raw recordings, with timeline editing and action insertion
 - Token-protected remote dashboard for scripts, recording, logs, assets, and live device status
 - Persistent dashboard hosting through SpringBoard, so closing the ZXTouch app does not stop the server
+- Package installs now finish before respringing, preventing interrupted dpkg transactions in Sileo
 
 The built-in automation system currently supports assigning actions to Volume Up, Volume Down, and Home button click patterns. Each trigger can use 1-5 clicks and can run one of these actions:
 
