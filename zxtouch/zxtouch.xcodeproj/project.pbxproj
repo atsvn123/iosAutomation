@@ -54,6 +54,8 @@
 		9684FFF325B873EC00549FC8 /* TableViewCellWithEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 9684FFF125B873EC00549FC8 /* TableViewCellWithEntry.m */; };
 		9684FFF425B873EC00549FC8 /* TableViewCellWithEntry.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9684FFF225B873EC00549FC8 /* TableViewCellWithEntry.xib */; };
 		96A2BC382587C20A008DE91F /* ScriptListTableCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 96A2BC372587C20A008DE91F /* ScriptListTableCell.m */; };
+		A0B1C2D3E4F5060708090A03 /* RemoteDashboardServer.m in Sources */ = {isa = PBXBuildFile; fileRef = A0B1C2D3E4F5060708090A02 /* RemoteDashboardServer.m */; };
+		A0B1C2D3E4F5060708090A06 /* RecordingEditorViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A0B1C2D3E4F5060708090A05 /* RecordingEditorViewController.m */; };
 		96D3EE3A25C1C009002B0000 /* ScriptPlaySettingsActivatorViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 96D3EE3825C1C009002B0000 /* ScriptPlaySettingsActivatorViewController.m */; };
 		96D3EE3B25C1C009002B0000 /* ScriptPlaySettingsActivatorViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 96D3EE3925C1C009002B0000 /* ScriptPlaySettingsActivatorViewController.xib */; };
 		96D3EE4225C1C9FE002B0000 /* TableViewCellSingleChoice.m in Sources */ = {isa = PBXBuildFile; fileRef = 96D3EE4025C1C9FE002B0000 /* TableViewCellSingleChoice.m */; };
@@ -309,6 +311,10 @@
 		96EE99C825D3C67D006B1243 /* Intents.intentdefinition */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.intentdefinition; path = Intents.intentdefinition; sourceTree = "<group>"; };
 		96F4696A258B24DA0052D78D /* ScriptEditorViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScriptEditorViewController.h; sourceTree = "<group>"; };
 		96F4696B258B24DA0052D78D /* ScriptEditorViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScriptEditorViewController.m; sourceTree = "<group>"; };
+		A0B1C2D3E4F5060708090A01 /* RemoteDashboardServer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RemoteDashboardServer.h; sourceTree = "<group>"; };
+		A0B1C2D3E4F5060708090A02 /* RemoteDashboardServer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RemoteDashboardServer.m; sourceTree = "<group>"; };
+		A0B1C2D3E4F5060708090A04 /* RecordingEditorViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RecordingEditorViewController.h; sourceTree = "<group>"; };
+		A0B1C2D3E4F5060708090A05 /* RecordingEditorViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RecordingEditorViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -543,6 +549,8 @@
 				965E8C9425B31DD100FDD35C /* Util.m */,
 				96D7E5A12581F99900B39A81 /* AppDelegate.h */,
 				96D7E5A22581F99900B39A81 /* AppDelegate.m */,
+				A0B1C2D3E4F5060708090A01 /* RemoteDashboardServer.h */,
+				A0B1C2D3E4F5060708090A02 /* RemoteDashboardServer.m */,
 				96D7E5A42581F99900B39A81 /* SceneDelegate.h */,
 				96D7E5A52581F99900B39A81 /* SceneDelegate.m */,
 				9649DA742587A4AD00CD3ADE /* ScriptListViewController.h */,
@@ -559,6 +567,8 @@
 				96A2BC372587C20A008DE91F /* ScriptListTableCell.m */,
 				96F4696A258B24DA0052D78D /* ScriptEditorViewController.h */,
 				96F4696B258B24DA0052D78D /* ScriptEditorViewController.m */,
+				A0B1C2D3E4F5060708090A04 /* RecordingEditorViewController.h */,
+				A0B1C2D3E4F5060708090A05 /* RecordingEditorViewController.m */,
 				96EE2C1225C93850005FC8C3 /* ImageViewerViewController.h */,
 				96EE2C1325C93850005FC8C3 /* ImageViewerViewController.m */,
 				965E8CBF25B3682C00FDD35C /* LogViewController.h */,
@@ -856,6 +866,8 @@
 				965E8CC225B3682C00FDD35C /* LogViewController.m in Sources */,
 				964DF10C25B9D87E006061B4 /* GCDWebServerConnection.m in Sources */,
 				96F4696C258B24DA0052D78D /* ScriptEditorViewController.m in Sources */,
+				A0B1C2D3E4F5060708090A03 /* RemoteDashboardServer.m in Sources */,
+				A0B1C2D3E4F5060708090A06 /* RecordingEditorViewController.m in Sources */,
 				964DF10825B9D87E006061B4 /* GCDWebServerResponse.m in Sources */,
 				964DF10E25B9D87E006061B4 /* GCDWebServerFileResponse.m in Sources */,
 				96D3EE3A25C1C009002B0000 /* ScriptPlaySettingsActivatorViewController.m in Sources */,

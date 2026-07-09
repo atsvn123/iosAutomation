@@ -22,6 +22,7 @@
 #import <objc/runtime.h>
 #import "Config.h"
 #import "ConfigManager.h"
+#import "RemoteDashboardServer.h"
 
 #define SETTING_CELL_SWITCH 0
 #define SETTING_CELL_ENTRY 1
@@ -180,7 +181,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     //
     cellsForEachSection = @[
         @[
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"webServer", nil), @"switch_click_handler": NSStringFromSelector(@selector(handleWebServerWithSwitchCellInstance:)), @"switch_init_status": @(NO)}
+            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"webServer", nil), @"switch_click_handler": NSStringFromSelector(@selector(handleWebServerWithSwitchCellInstance:)), @"switch_init_status": @(ZXRemoteDashboardIsEnabled())}
         ],
         @[
             @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"touchIndicator", nil), @"secondary_title": @"", @"row_click_handler": NSStringFromSelector(@selector(handleTouchIndicatorWithEntryCellInstance:))},
@@ -236,7 +237,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     sections = @[NSLocalizedString(@"remoteManagement", nil), NSLocalizedString(@"control", nil), @"Automation", NSLocalizedString(@"script", nil), @"Appearance", @"About"];
     cellsForEachSection = @[
         @[
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"webServer", nil), @"switch_click_handler": NSStringFromSelector(@selector(handleWebServerWithSwitchCellInstance:)), @"switch_init_status": @(NO)}
+            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"webServer", nil), @"switch_click_handler": NSStringFromSelector(@selector(handleWebServerWithSwitchCellInstance:)), @"switch_init_status": @(ZXRemoteDashboardIsEnabled())}
         ],
         @[
             @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"touchIndicator", nil), @"secondary_title": @"", @"row_click_handler": NSStringFromSelector(@selector(handleTouchIndicatorWithEntryCellInstance:))},
@@ -469,15 +470,23 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 }
 
 - (void)handleWebServerWithSwitchCellInstance:(UISwitch*)s {
-    if ([s isOn])
-    {
-        [Util showAlertBoxWithOneOption:self title:@"ZXTouch" message:NSLocalizedString(@"commonSoon", nil) buttonString:@"OK"];
-        [s setOn:NO];
+    if (![s isOn]) {
+        ZXRemoteDashboardSetEnabled(NO);
+        return;
     }
-    else
-    {
-        NSLog(@"Stop WebServer");
+
+    if (!ZXRemoteDashboardSetEnabled(YES)) {
+        [s setOn:NO animated:YES];
+        NSString *dashboardError = ZXRemoteDashboardLastError();
+        [Util showAlertBoxWithOneOption:self title:@"Dashboard unavailable"
+            message:dashboardError.length ? dashboardError : @"Unable to start the local dashboard."
+            buttonString:@"OK"];
+        return;
     }
+
+    [Util showAlertBoxWithOneOption:self title:@"Remote Dashboard"
+        message:[NSString stringWithFormat:@"Open this address from a device on the same Wi-Fi:\n\n%@", ZXRemoteDashboardURL()]
+        buttonString:@"OK"];
 }
 
 - (void)handleDarkModeToggle:(UISwitch*)s {

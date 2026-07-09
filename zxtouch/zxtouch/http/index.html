@@ -1,4 +1,107 @@
-<h1>ZXTouch</h1>
-
-
-@file_list_table@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZXTouch Dashboard</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101114; --panel:#191b20; --line:#2d3037; --text:#f4f5f7; --muted:#a7aab3; --blue:#1689ff; --green:#29c978; --red:#ff5f57; --amber:#f1b84b; }
+    * { box-sizing:border-box; }
+    body { margin:0; font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+    header { min-height:72px; padding:16px max(20px,calc((100vw - 1180px)/2)); display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid var(--line); background:#15171b; }
+    h1 { margin:0; font-size:20px; font-weight:700; letter-spacing:0; }
+    .subtitle { color:var(--muted); margin-top:3px; font-size:12px; }
+    main { max-width:1180px; margin:0 auto; padding:22px 20px 44px; display:grid; grid-template-columns:minmax(0,1.65fr) minmax(280px,.85fr); gap:18px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+    .full { grid-column:1/-1; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--line); }
+    h2 { margin:0; font-size:14px; font-weight:650; }
+    .status-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); padding:12px; gap:10px; }
+    .stat { border:1px solid var(--line); padding:12px; min-height:68px; border-radius:6px; background:#14161a; }
+    .stat span { display:block; color:var(--muted); font-size:11px; margin-bottom:7px; text-transform:uppercase; letter-spacing:.05em; }
+    .stat strong { font-size:15px; font-weight:600; overflow-wrap:anywhere; }
+    button, input, select { font:inherit; }
+    button { border:1px solid #3b404a; background:#252932; color:var(--text); padding:7px 10px; border-radius:5px; cursor:pointer; white-space:nowrap; }
+    button:hover { background:#303642; }
+    button.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
+    button.stop { color:#fff; background:#9e3531; border-color:#b5453f; }
+    button.record { color:#fff; background:#b3423c; border-color:#cf514b; }
+    button[disabled] { cursor:not-allowed; opacity:.5; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; }
+    table { border-collapse:collapse; width:100%; }
+    th, td { text-align:left; padding:12px 16px; border-bottom:1px solid var(--line); vertical-align:middle; }
+    th { color:var(--muted); font-weight:600; font-size:11px; letter-spacing:.04em; text-transform:uppercase; }
+    tr:last-child td { border-bottom:0; }
+    .script-name { font-weight:600; }
+    .script-path { color:var(--muted); font-size:12px; margin-top:3px; overflow-wrap:anywhere; }
+    .kind { display:inline-block; padding:3px 6px; border-radius:4px; font-size:11px; background:#243145; color:#9dc8ff; }
+    .kind.raw { background:#40301d; color:#f5c66d; }
+    .empty { color:var(--muted); text-align:center; padding:32px; }
+    pre { margin:0; padding:14px 16px; min-height:250px; max-height:430px; overflow:auto; font:12px ui-monospace,SFMono-Regular,Menlo,monospace; line-height:1.55; color:#d5dae4; background:#111318; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .form { padding:14px 16px; display:grid; gap:10px; }
+    label { display:grid; gap:5px; color:var(--muted); font-size:12px; }
+    input, select { width:100%; min-width:0; color:var(--text); background:#111318; border:1px solid #3b404a; border-radius:5px; padding:9px; }
+    .notice { display:none; position:fixed; right:18px; bottom:18px; max-width:390px; background:#252932; border:1px solid #424956; border-left:3px solid var(--blue); padding:12px 14px; border-radius:6px; box-shadow:0 14px 34px rgba(0,0,0,.35); }
+    .notice.error { border-left-color:var(--red); }
+    @media (max-width:800px) { main { grid-template-columns:1fr; padding:14px; } header { padding:14px; } .full { grid-column:auto; } th:nth-child(2), td:nth-child(2) { display:none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>ZXTouch Dashboard</h1><div class="subtitle" id="connection">Connecting...</div></div>
+    <div class="actions"><button id="refresh">Refresh</button><button class="stop" id="stop">Stop Script</button></div>
+  </header>
+  <main>
+    <section>
+      <div class="section-head"><h2>Scripts</h2><div class="actions"><button class="record" id="recordStart">Start Recording</button><button id="recordStop">Stop Recording</button></div></div>
+      <table><thead><tr><th>Script</th><th>Entry</th><th>Actions</th></tr></thead><tbody id="scripts"><tr><td class="empty" colspan="3">Loading scripts...</td></tr></tbody></table>
+    </section>
+    <section>
+      <div class="section-head"><h2>Device</h2></div>
+      <div class="status-grid">
+        <div class="stat"><span>Screen</span><strong id="screen">-</strong></div>
+        <div class="stat"><span>Orientation</span><strong id="orientation">-</strong></div>
+        <div class="stat"><span>Battery</span><strong id="battery">-</strong></div>
+        <div class="stat"><span>Foreground app</span><strong id="foregroundApp">-</strong></div>
+        <div class="stat"><span>Activity</span><strong id="activity">-</strong></div>
+        <div class="stat"><span>Last action</span><strong id="lastAction">-</strong></div>
+      </div>
+      <div class="section-head"><h2>Asset Upload</h2></div>
+      <form class="form" id="assetForm"><label>Script<select id="assetScript" name="script"></select></label><label>Asset<input name="asset" type="file" required></label><button class="primary" type="submit">Upload Asset</button></form>
+    </section>
+    <section class="full">
+      <div class="section-head"><h2>Live Logs</h2><div class="actions"><button id="clearLog">Clear</button></div></div>
+      <pre id="logs">Loading logs...</pre>
+    </section>
+  </main>
+  <div class="notice" id="notice"></div>
+  <script>
+    const token = new URLSearchParams(location.search).get('token') || '';
+    const query = path => `${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    const notice = (text, error=false) => { const el=document.querySelector('#notice'); el.textContent=text; el.className=`notice ${error?'error':''}`; el.style.display='block'; clearTimeout(notice.timer); notice.timer=setTimeout(()=>el.style.display='none',4200); };
+    async function api(path, options={}) { const response=await fetch(query(path), options); const payload=await response.json(); if(!response.ok || !payload.ok) throw new Error(payload.error || payload.result || 'Request failed'); return payload; }
+    function escapeHTML(value) { const node=document.createElement('span'); node.textContent=value || ''; return node.innerHTML; }
+    function run(path) { api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})}).then(()=>{notice('Script started');loadStatus();}).catch(error=>notice(error.message,true)); }
+    function downloadScript(path) { location.href=query(`/api/download?path=${encodeURIComponent(path)}`); }
+    async function loadScripts() {
+      const payload=await api('/api/scripts'); const body=document.querySelector('#scripts'); const select=document.querySelector('#assetScript');
+      select.innerHTML='';
+      if(!payload.scripts.length){ body.innerHTML='<tr><td class="empty" colspan="3">No scripts found.</td></tr>'; return; }
+      body.innerHTML=payload.scripts.map(script=>`<tr><td><div class="script-name">${escapeHTML(script.name)}</div><div class="script-path">${escapeHTML(script.path)}</div></td><td><span class="kind ${script.type==='raw'?'raw':''}">${escapeHTML(script.type || 'script')}</span></td><td><div class="actions"><button class="primary run-script" data-path="${encodeURIComponent(script.path)}">Run</button><button class="download-script" data-path="${encodeURIComponent(script.path)}">Download</button></div></td></tr>`).join('');
+      body.querySelectorAll('.run-script').forEach(button=>button.onclick=()=>run(decodeURIComponent(button.dataset.path)));
+      body.querySelectorAll('.download-script').forEach(button=>button.onclick=()=>downloadScript(decodeURIComponent(button.dataset.path)));
+      payload.scripts.forEach(script=>{const option=document.createElement('option');option.value=script.path;option.textContent=script.name;select.appendChild(option);});
+    }
+    async function loadStatus(){ const payload=await api('/api/status'); const status=payload.status; document.querySelector('#connection').textContent=`Local dashboard on port ${status.port}`; document.querySelector('#screen').textContent=`${status.screen.width || '-'} x ${status.screen.height || '-'}`; document.querySelector('#orientation').textContent=status.orientation || '-'; document.querySelector('#battery').textContent=status.battery ? `${Math.round(Number(status.battery))}%` : '-'; document.querySelector('#foregroundApp').textContent=status.foregroundApp || '-'; document.querySelector('#activity').textContent=status.recording ? 'Recording' : (status.scriptPlaying ? 'Script running' : 'Idle'); document.querySelector('#lastAction').textContent=status.lastAction || '-'; }
+    async function loadLogs(){ const payload=await api('/api/logs'); const log=document.querySelector('#logs'); const stick=log.scrollTop + log.clientHeight >= log.scrollHeight - 10; log.textContent=payload.logs || 'No logs yet.'; if(stick)log.scrollTop=log.scrollHeight; }
+    async function refresh(){ try{await Promise.all([loadScripts(),loadStatus(),loadLogs()]);}catch(error){notice(error.message,true);} }
+    document.querySelector('#refresh').onclick=refresh;
+    document.querySelector('#stop').onclick=()=>api('/api/stop',{method:'POST'}).then(()=>{notice('Stop requested');loadStatus();}).catch(error=>notice(error.message,true));
+    document.querySelector('#recordStart').onclick=()=>api('/api/record/start',{method:'POST'}).then(()=>{notice('Recording started');loadStatus();}).catch(error=>notice(error.message,true));
+    document.querySelector('#recordStop').onclick=()=>api('/api/record/stop',{method:'POST'}).then(()=>{notice('Recording stopped');refresh();}).catch(error=>notice(error.message,true));
+    document.querySelector('#assetForm').onsubmit=event=>{ event.preventDefault(); api('/api/assets',{method:'POST',body:new FormData(event.currentTarget)}).then(payload=>{notice(`Uploaded ${payload.file}`);event.currentTarget.reset();}).catch(error=>notice(error.message,true)); };
+    document.querySelector('#clearLog').onclick=()=>notice('Clear logs from the app log view.');
+    refresh(); setInterval(()=>{loadStatus().catch(()=>{});loadLogs().catch(()=>{});},2500);
+  </script>
+</body>
+</html>

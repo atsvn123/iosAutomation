@@ -22,6 +22,9 @@
     // Override point for customization after application launch.
 
     // Dark mode is applied in SceneDelegate when the window is ready
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"zxtouch_remote_dashboard_enabled"]) {
+        ZXRemoteDashboardSetEnabled(YES);
+    }
     
     return YES;
 }

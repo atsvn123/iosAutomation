@@ -8,6 +8,7 @@
 #import "ScriptListViewController.h"
 #import "ScriptListTableCell.h"
 #import "ScriptEditorViewController.h"
+#import "RecordingEditorViewController.h"
 #import "LogViewController.h"
 #import "ScriptManagement/AdderPopOverViewController.h"
 #import "ImageViewerViewController.h"
@@ -282,6 +283,15 @@
     
     if (isDir)
     {
+        if ([[path pathExtension].lowercaseString isEqualToString:@"bdl"]) {
+            NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"info.plist"]];
+            NSString *entry = [info[@"Entry"] isKindOfClass:[NSString class]] ? info[@"Entry"] : @"";
+            if ([entry.pathExtension.lowercaseString isEqualToString:@"raw"]) {
+                RecordingEditorViewController *recordingEditor = [[RecordingEditorViewController alloc] initWithScriptBundlePath:path];
+                [self.navigationController pushViewController:recordingEditor animated:YES];
+                return;
+            }
+        }
         ScriptListViewController *scriptBundleContentViewController = [self.storyboard instantiateViewControllerWithIdentifier:@"scriptBundleContent"];
         
         

@@ -6,6 +6,7 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "RemoteDashboardServer.h"
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 

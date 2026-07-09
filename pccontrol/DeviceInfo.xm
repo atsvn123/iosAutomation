@@ -1,5 +1,8 @@
 #include "DeviceInfo.h"
 #include "Screen.h"
+#include "Play.h"
+#include "Process.h"
+#include "Record.h"
 #import <sys/utsname.h>
 static NSString* modelName()
 {
@@ -47,6 +50,12 @@ NSString *getDeviceInfoFromRawData(UInt8* eventData, NSError **error)
         return [NSString stringWithFormat:@"%d;;%f", 
                                 state, 
                                 batLeft];
+    }
+    else if (task == DEVICE_INFO_TASK_GET_RUNTIME_STATUS)
+    {
+        SBApplication *frontMostApp = getFrontMostApplication();
+        NSString *bundleIdentifier = frontMostApp.bundleIdentifier ?: @"com.apple.springboard";
+        return [NSString stringWithFormat:@"%@;;%d;;%d", bundleIdentifier, isScriptPlaying(), isRecordingStart()];
     }
     else
     {
