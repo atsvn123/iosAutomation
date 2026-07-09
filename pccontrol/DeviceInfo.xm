@@ -53,8 +53,12 @@ NSString *getDeviceInfoFromRawData(UInt8* eventData, NSError **error)
     }
     else if (task == DEVICE_INFO_TASK_GET_RUNTIME_STATUS)
     {
-        SBApplication *frontMostApp = getFrontMostApplication();
-        NSString *bundleIdentifier = frontMostApp.bundleIdentifier ?: @"com.apple.springboard";
+        id frontMostApp = getFrontMostApplication();
+        NSString *bundleIdentifier = nil;
+        if ([frontMostApp respondsToSelector:@selector(bundleIdentifier)]) {
+            bundleIdentifier = [frontMostApp bundleIdentifier];
+        }
+        if (bundleIdentifier.length == 0) bundleIdentifier = @"com.apple.springboard";
         return [NSString stringWithFormat:@"%@;;%d;;%d", bundleIdentifier, isScriptPlaying(), isRecordingStart()];
     }
     else
