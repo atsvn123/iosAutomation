@@ -3,71 +3,537 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>ZXTouch Control</title>
   <style>
-    :root { color-scheme:dark; --page:#0d0f12; --surface:#15181d; --surface-2:#1c2027; --line:#303640; --text:#eff2f6; --muted:#949ca9; --blue:#1689ff; --cyan:#18b7bf; --green:#35c980; --amber:#f3bd53; --red:#e85c5c; }
-    * { box-sizing:border-box; } body { margin:0; min-width:320px; background:var(--page); color:var(--text); font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-    button,input,select { font:inherit; } button { min-height:32px; padding:6px 10px; border:1px solid var(--line); border-radius:5px; background:#242a33; color:var(--text); cursor:pointer; } button:hover { background:#303845; } button.primary { background:var(--blue); border-color:var(--blue); } button.danger { background:#762e32; border-color:#a6454a; } button.secondary { color:#b9dcff; }
-    header { height:68px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 max(18px,calc((100vw - 1240px)/2)); border-bottom:1px solid var(--line); background:#12151a; }
-    .brand { display:flex; align-items:center; gap:11px; } .mark { width:30px; height:30px; display:grid; place-items:center; border:1px solid #247bc6; color:#9fd0ff; background:#132638; border-radius:6px; font-weight:750; } h1 { margin:0; font-size:17px; letter-spacing:0; } .sub { margin-top:2px; color:var(--muted); font-size:12px; }
-    .connection { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; } .dot { width:8px; height:8px; border-radius:50%; background:var(--red); } .dot.online { background:var(--green); box-shadow:0 0 0 3px rgba(53,201,128,.12); }
-    main { max-width:1240px; margin:0 auto; padding:20px 18px 42px; } .metrics { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); border:1px solid var(--line); background:var(--surface); border-radius:7px; overflow:hidden; }
-    .metric { min-height:78px; padding:14px; border-right:1px solid var(--line); } .metric:last-child { border-right:0; } .metric label { display:block; margin-bottom:8px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; } .metric strong { display:block; overflow-wrap:anywhere; font-size:14px; font-weight:650; }
-    .grid { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(305px,.9fr); gap:16px; margin-top:16px; } .side { display:grid; align-content:start; gap:16px; } section { background:var(--surface); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
-    .head { min-height:53px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; border-bottom:1px solid var(--line); } h2 { margin:0; font-size:13px; font-weight:700; } .tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .tools input { width:190px; min-height:32px; padding:6px 9px; border:1px solid var(--line); border-radius:5px; color:var(--text); background:#0f1115; }
-    table { width:100%; border-collapse:collapse; } th,td { padding:12px 14px; text-align:left; border-bottom:1px solid #2a3039; } th { color:var(--muted); font-size:10px; letter-spacing:.07em; text-transform:uppercase; } tr:last-child td { border-bottom:0; } .name { font-weight:650; } .path { margin-top:3px; color:var(--muted); font:11px ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; } .type { display:inline-block; padding:3px 6px; border-radius:4px; color:#9ed0ff; background:#132e48; font-size:11px; } .type.raw { color:#f6ca75; background:#3b2d19; } .empty { padding:32px; color:var(--muted); text-align:center; }
-    .control-list { display:grid; } .control { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 14px; border-bottom:1px solid var(--line); } .control:last-child { border-bottom:0; } .control-title { font-weight:600; } .control-detail { margin-top:3px; color:var(--muted); font-size:12px; }
-    .form { display:grid; gap:12px; padding:14px; } .form label { display:grid; gap:6px; color:var(--muted); font-size:12px; } .form select,.form input { width:100%; min-height:36px; padding:7px 9px; border:1px solid var(--line); border-radius:5px; color:var(--text); background:#0f1115; }
-    .diagnostics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; } .diagnostic { padding:12px 14px; border-right:1px solid var(--line); border-bottom:1px solid var(--line); } .diagnostic:nth-child(2n) { border-right:0; } .diagnostic-wide { grid-column:1/-1; border-bottom:0; } .diagnostic label { color:var(--muted); display:block; font-size:10px; letter-spacing:.07em; text-transform:uppercase; margin-bottom:6px; } .diagnostic strong { font-size:12px; overflow-wrap:anywhere; }
-    .logs { margin-top:16px; } pre { margin:0; min-height:250px; max-height:430px; overflow:auto; padding:14px; background:#0d0f13; color:#cbd3de; font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
-    .notice { position:fixed; right:18px; bottom:18px; display:none; max-width:400px; padding:11px 13px; border:1px solid #424b59; border-left:3px solid var(--blue); border-radius:6px; background:#202630; box-shadow:0 16px 38px rgba(0,0,0,.38); } .notice.error { border-left-color:var(--red); }
-    @media (max-width:980px) { .metrics { grid-template-columns:repeat(3,1fr); } .metric:nth-child(3) { border-right:0; } .metric:nth-child(-n+3) { border-bottom:1px solid var(--line); } .grid { grid-template-columns:1fr; } } @media (max-width:620px) { header { height:auto; padding:12px 14px; align-items:flex-start; } .connection { margin-top:5px; } .metrics { grid-template-columns:repeat(2,1fr); } .metric:nth-child(2n) { border-right:0; } .metric { border-bottom:1px solid var(--line); } .metric:nth-last-child(-n+2) { border-bottom:0; } .tools input { width:100%; } th:nth-child(2),td:nth-child(2) { display:none; } }
+    :root {
+      color-scheme: dark;
+      --page: #0b0d10;
+      --bar: #111419;
+      --panel: #15191f;
+      --panel-raised: #1b2028;
+      --field: #0e1115;
+      --line: #2a3039;
+      --line-strong: #3a424e;
+      --text: #f4f6f8;
+      --muted: #9aa3af;
+      --muted-strong: #c3cad3;
+      --blue: #2f8cff;
+      --blue-hover: #4b9cff;
+      --green: #38c983;
+      --cyan: #28b9c7;
+      --amber: #e7b04c;
+      --red: #ef6262;
+      --red-deep: #7d3035;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .28);
+    }
+
+    * { box-sizing: border-box; letter-spacing: 0; }
+    html { background: var(--page); }
+    body { margin: 0; min-width: 320px; color: var(--text); background: var(--page); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input, select { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
+
+    .topbar { position: sticky; z-index: 20; top: 0; min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px max(18px, calc((100vw - 1280px) / 2)); border-bottom: 1px solid var(--line); background: rgba(17, 20, 25, .96); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+    .brand { min-width: 0; display: flex; align-items: center; gap: 12px; }
+    .brand-mark { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border: 1px solid #2868a8; border-radius: 8px; color: #b9dcff; background: #132438; font-weight: 800; }
+    .brand-copy { min-width: 0; }
+    .brand h1 { margin: 0; font-size: 17px; line-height: 1.2; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+    .connection-pill { min-height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted-strong); background: var(--panel); font-size: 12px; white-space: nowrap; }
+    .status-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--red); }
+    .status-dot.online { background: var(--green); box-shadow: 0 0 0 3px rgba(56, 201, 131, .13); }
+
+    .icon-button, .button { min-height: 34px; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--text); background: #252b34; cursor: pointer; transition: background .15s ease, border-color .15s ease, opacity .15s ease; }
+    .icon-button:hover, .button:hover { background: #303844; border-color: #505a68; }
+    .icon-button:focus-visible, .button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .icon-button { width: 36px; height: 36px; display: inline-grid; place-items: center; padding: 0; font-size: 18px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 7px 11px; white-space: nowrap; }
+    .button.primary { border-color: var(--blue); background: var(--blue); color: #fff; font-weight: 650; }
+    .button.primary:hover { background: var(--blue-hover); }
+    .button.danger { border-color: #a9444b; background: var(--red-deep); color: #fff; }
+    .button.ghost { background: transparent; }
+    .button[disabled], .icon-button[disabled] { cursor: not-allowed; opacity: .42; }
+    .button-symbol { width: 15px; display: inline-grid; place-items: center; font-size: 13px; line-height: 1; }
+
+    .offline-banner { max-width: 1280px; margin: 14px auto 0; padding: 11px 14px; border: 1px solid #69383d; border-radius: 7px; color: #ffd4d4; background: #2a171a; }
+    .offline-banner strong { margin-right: 6px; }
+    main { width: min(1280px, 100%); margin: 0 auto; padding: 18px 18px 42px; }
+
+    .overview { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); box-shadow: var(--shadow); }
+    .metric { min-width: 0; min-height: 84px; padding: 14px; border-right: 1px solid var(--line); }
+    .metric:last-child { border-right: 0; }
+    .metric-label { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; color: var(--muted); font-size: 11px; font-weight: 650; text-transform: uppercase; }
+    .metric-icon { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 4px; color: var(--muted-strong); background: #262d36; font-size: 10px; }
+    .metric-value { display: block; min-width: 0; overflow: hidden; color: var(--text); font-size: 14px; font-weight: 680; text-overflow: ellipsis; white-space: nowrap; }
+    .metric-value.good { color: var(--green); }
+    .metric-value.bad { color: var(--red); }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(320px, .78fr); gap: 16px; margin-top: 16px; align-items: start; }
+    .sidebar { display: grid; gap: 16px; }
+    .panel { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: var(--shadow); }
+    .panel-head { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+    .panel-title { min-width: 0; }
+    .panel-title h2 { margin: 0; font-size: 14px; line-height: 1.2; }
+    .panel-title p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    .panel-tools { display: flex; align-items: center; gap: 8px; }
+
+    .search { width: min(230px, 35vw); min-height: 35px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--text); background: var(--field); }
+    .search::placeholder { color: #747e8b; }
+    .segmented { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); }
+    .segment { min-height: 29px; padding: 4px 9px; border: 0; border-radius: 4px; color: var(--muted); background: transparent; cursor: pointer; }
+    .segment.active { color: var(--text); background: #2b333e; }
+
+    .script-list { min-height: 330px; }
+    .script-row { min-height: 72px; display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+    .script-row:last-child { border-bottom: 0; }
+    .script-row:hover { background: #181d24; }
+    .script-type { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #29537c; border-radius: 7px; color: #a9d4ff; background: #14263a; font-size: 11px; font-weight: 800; }
+    .script-type.raw { border-color: #68532b; color: #f3cc7d; background: #302616; }
+    .script-copy { min-width: 0; }
+    .script-name { overflow: hidden; font-weight: 680; text-overflow: ellipsis; white-space: nowrap; }
+    .script-path { margin-top: 4px; overflow: hidden; color: var(--muted); font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+    .script-actions { display: flex; align-items: center; gap: 7px; }
+    .empty-state { min-height: 260px; display: grid; place-items: center; padding: 30px; color: var(--muted); text-align: center; }
+
+    .control-stack { display: grid; }
+    .control-row { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 14px; border-bottom: 1px solid var(--line); }
+    .control-row:last-child { border-bottom: 0; }
+    .control-copy { min-width: 0; }
+    .control-name { font-weight: 650; }
+    .control-detail { margin-top: 4px; overflow-wrap: anywhere; color: var(--muted); font-size: 12px; }
+    .control-actions { flex: 0 0 auto; display: flex; gap: 7px; }
+
+    .upload-form { display: grid; gap: 12px; padding: 14px; }
+    .field { display: grid; gap: 6px; }
+    .field-label { color: var(--muted-strong); font-size: 12px; font-weight: 600; }
+    .field select, .field input[type="file"] { width: 100%; min-height: 38px; padding: 8px 9px; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--text); background: var(--field); }
+    .form-note { color: var(--muted); font-size: 11px; }
+
+    .diagnostic-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .diagnostic { min-width: 0; padding: 12px 14px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .diagnostic:nth-child(2n) { border-right: 0; }
+    .diagnostic-label { margin-bottom: 5px; color: var(--muted); font-size: 10px; font-weight: 650; text-transform: uppercase; }
+    .diagnostic-value { overflow-wrap: anywhere; color: var(--muted-strong); font-size: 12px; font-weight: 650; }
+    .diagnostic-wide { grid-column: 1 / -1; border-right: 0; border-bottom: 0; }
+
+    .logs-panel { margin-top: 16px; }
+    .log-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .log-filter { width: 180px; min-height: 34px; padding: 6px 9px; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--text); background: var(--field); }
+    .toggle { min-height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 0 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted-strong); background: var(--field); font-size: 12px; cursor: pointer; }
+    .toggle input { accent-color: var(--blue); }
+    .log-output { min-height: 280px; max-height: 470px; margin: 0; overflow: auto; padding: 15px; color: #d4dae2; background: #0a0c0f; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+    .toast { position: fixed; z-index: 50; right: 18px; bottom: 18px; width: min(390px, calc(100vw - 36px)); padding: 12px 14px; border: 1px solid #44505f; border-left: 3px solid var(--blue); border-radius: 7px; color: var(--text); background: #222832; box-shadow: var(--shadow); }
+    .toast.error { border-left-color: var(--red); }
+    .modal-backdrop { position: fixed; z-index: 60; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(0, 0, 0, .68); }
+    .modal { width: min(420px, 100%); overflow: hidden; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel-raised); box-shadow: 0 28px 80px rgba(0, 0, 0, .55); }
+    .modal-body { padding: 18px; }
+    .modal h3 { margin: 0; font-size: 16px; }
+    .modal p { margin: 9px 0 0; color: var(--muted-strong); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); background: #171b21; }
+
+    @media (max-width: 1040px) {
+      .overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .metric:nth-child(3n) { border-right: 0; }
+      .metric:nth-child(-n + 3) { border-bottom: 1px solid var(--line); }
+      .workspace { grid-template-columns: 1fr; }
+      .sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sidebar .diagnostics-panel { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 700px) {
+      .topbar { position: static; align-items: flex-start; padding: 12px 14px; }
+      .brand p, .connection-pill span { display: none; }
+      .topbar-actions { gap: 7px; }
+      main { padding: 14px 12px 30px; }
+      .offline-banner { margin: 12px; }
+      .overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric { min-height: 76px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+      .metric:nth-child(2n) { border-right: 0; }
+      .metric:nth-last-child(-n + 2) { border-bottom: 0; }
+      .panel-head { align-items: flex-start; flex-direction: column; }
+      .panel-tools { width: 100%; flex-wrap: wrap; }
+      .search { width: 100%; }
+      .segmented { flex: 1 1 auto; }
+      .segment { flex: 1; }
+      .script-row { grid-template-columns: 42px minmax(0, 1fr); }
+      .script-actions { grid-column: 2; }
+      .sidebar { grid-template-columns: 1fr; }
+      .sidebar .diagnostics-panel { grid-column: auto; }
+      .logs-panel .panel-head { align-items: stretch; }
+      .log-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .log-filter { width: 100%; grid-column: 1 / -1; }
+      .log-tools .button { width: 100%; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand"><div class="mark">ZX</div><div><h1>ZXTouch Control</h1><div class="sub">Paired local dashboard</div></div></div>
-    <div class="connection"><span class="dot" id="serviceDot"></span><span id="connection">Checking service</span><button id="refresh">Refresh</button></div>
-  </header>
-  <main>
-    <div class="metrics">
-      <div class="metric"><label>Service</label><strong id="service">-</strong></div><div class="metric"><label>Screen</label><strong id="screen">-</strong></div><div class="metric"><label>Orientation</label><strong id="orientation">-</strong></div><div class="metric"><label>Battery</label><strong id="battery">-</strong></div><div class="metric"><label>Foreground App</label><strong id="foreground">-</strong></div><div class="metric"><label>Activity</label><strong id="activity">-</strong></div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">ZX</div>
+      <div class="brand-copy">
+        <h1>ZXTouch Control</h1>
+        <p>Remote session on this iPad</p>
+      </div>
     </div>
-    <div class="grid">
-      <section>
-        <div class="head"><h2>Script Library</h2><div class="tools"><input id="filter" type="search" placeholder="Filter scripts"></div></div>
-        <table><thead><tr><th>Script</th><th>Entry</th><th>Control</th></tr></thead><tbody id="scripts"><tr><td class="empty" colspan="3">Loading scripts...</td></tr></tbody></table>
+    <div class="topbar-actions">
+      <div class="connection-pill"><span class="status-dot" id="serviceDot"></span><span id="connectionText">Connecting</span></div>
+      <button class="icon-button" id="refresh" title="Refresh dashboard" aria-label="Refresh dashboard">&#8635;</button>
+    </div>
+  </header>
+
+  <div class="offline-banner" id="offlineBanner" hidden><strong>ZXTouch service unavailable.</strong> Controls are paused until the local service reconnects.</div>
+
+  <main>
+    <section class="overview" aria-label="Device overview">
+      <div class="metric"><div class="metric-label"><span class="metric-icon">S</span>Service</div><strong class="metric-value" id="service">Checking</strong></div>
+      <div class="metric"><div class="metric-label"><span class="metric-icon">A</span>Activity</div><strong class="metric-value" id="activity">-</strong></div>
+      <div class="metric"><div class="metric-label"><span class="metric-icon">D</span>Display</div><strong class="metric-value" id="screen">-</strong></div>
+      <div class="metric"><div class="metric-label"><span class="metric-icon">O</span>Orientation</div><strong class="metric-value" id="orientation">-</strong></div>
+      <div class="metric"><div class="metric-label"><span class="metric-icon">B</span>Battery</div><strong class="metric-value" id="battery">-</strong></div>
+      <div class="metric"><div class="metric-label"><span class="metric-icon">F</span>Foreground</div><strong class="metric-value" id="foreground" title="Foreground app">-</strong></div>
+    </section>
+
+    <div class="workspace">
+      <section class="panel library-panel">
+        <div class="panel-head">
+          <div class="panel-title"><h2>Script Library</h2><p id="scriptSummary">Loading scripts</p></div>
+          <div class="panel-tools">
+            <input class="search" id="scriptSearch" type="search" placeholder="Search scripts" aria-label="Search scripts">
+            <div class="segmented" aria-label="Script type filter">
+              <button class="segment active" data-filter="all">All</button>
+              <button class="segment" data-filter="py">Python</button>
+              <button class="segment" data-filter="raw">Raw</button>
+            </div>
+          </div>
+        </div>
+        <div class="script-list" id="scripts"><div class="empty-state">Loading script library...</div></div>
       </section>
-      <aside class="side">
-        <section><div class="head"><h2>Playback</h2></div><div class="control-list"><div class="control"><div><div class="control-title">Current Script</div><div class="control-detail" id="lastAction">-</div></div><button class="danger" id="stop">Stop</button></div><div class="control"><div><div class="control-title">Touch Recorder</div><div class="control-detail" id="recordingState">Idle</div></div><div class="tools"><button id="recordStart">Start</button><button id="recordStop">Stop</button></div></div></div></section>
-        <section><div class="head"><h2>Asset Upload</h2></div><form class="form" id="assetForm"><label>Script<select id="assetScript" name="script"></select></label><label>Asset File<input name="asset" type="file" required></label><button class="primary" type="submit">Upload Asset</button></form></section>
-        <section><div class="head"><h2>Diagnostics</h2></div><div class="diagnostics"><div class="diagnostic"><label>Socket</label><strong id="socketState">-</strong></div><div class="diagnostic"><label>Port</label><strong id="port">-</strong></div><div class="diagnostic"><label>Scripts</label><strong id="scriptCount">-</strong></div><div class="diagnostic"><label>Pairing</label><strong>Token required</strong></div><div class="diagnostic diagnostic-wide"><label>Last Error</label><strong id="lastError">None</strong></div></div></section>
+
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-head"><div class="panel-title"><h2>Playback</h2><p>Current device control</p></div></div>
+          <div class="control-stack">
+            <div class="control-row">
+              <div class="control-copy"><div class="control-name">Script runner</div><div class="control-detail" id="lastAction">Ready</div></div>
+              <button class="button danger" id="stop"><span class="button-symbol">&#9632;</span>Stop</button>
+            </div>
+            <div class="control-row">
+              <div class="control-copy"><div class="control-name">Touch recorder</div><div class="control-detail" id="recordingState">Idle</div></div>
+              <div class="control-actions"><button class="button" id="recordStart"><span class="button-symbol">&#9679;</span>Start</button><button class="button" id="recordStop"><span class="button-symbol">&#9632;</span>Save</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><div class="panel-title"><h2>Script Assets</h2><p>Add images and support files</p></div></div>
+          <form class="upload-form" id="assetForm">
+            <label class="field"><span class="field-label">Destination script</span><select id="assetScript" name="script"></select></label>
+            <label class="field"><span class="field-label">Asset file</span><input id="assetFile" name="asset" type="file" required></label>
+            <div class="form-note">Maximum file size: 25 MB</div>
+            <button class="button primary" id="uploadButton" type="submit"><span class="button-symbol">&#8593;</span>Upload asset</button>
+          </form>
+        </section>
+
+        <section class="panel diagnostics-panel">
+          <div class="panel-head"><div class="panel-title"><h2>Diagnostics</h2><p>Dashboard and service health</p></div></div>
+          <div class="diagnostic-grid">
+            <div class="diagnostic"><div class="diagnostic-label">Socket</div><div class="diagnostic-value" id="socketState">Checking</div></div>
+            <div class="diagnostic"><div class="diagnostic-label">HTTP port</div><div class="diagnostic-value" id="port">8080</div></div>
+            <div class="diagnostic"><div class="diagnostic-label">Scripts</div><div class="diagnostic-value" id="scriptCount">-</div></div>
+            <div class="diagnostic"><div class="diagnostic-label">Access</div><div class="diagnostic-value">Private token</div></div>
+            <div class="diagnostic diagnostic-wide"><div class="diagnostic-label">Last error</div><div class="diagnostic-value" id="lastError">None</div></div>
+          </div>
+        </section>
       </aside>
     </div>
-    <section class="logs"><div class="head"><h2>Runtime Logs</h2><div class="tools"><button id="clearLogs">Clear Logs</button></div></div><pre id="logs">Loading logs...</pre></section>
+
+    <section class="panel logs-panel">
+      <div class="panel-head">
+        <div class="panel-title"><h2>Runtime Logs</h2><p id="logSummary">Waiting for output</p></div>
+        <div class="log-tools">
+          <input class="log-filter" id="logFilter" type="search" placeholder="Filter log output" aria-label="Filter log output">
+          <label class="toggle"><input id="autoFollow" type="checkbox" checked>Follow</label>
+          <button class="button ghost" id="copyLogs"><span class="button-symbol">C</span>Copy</button>
+          <button class="button ghost" id="downloadLogs"><span class="button-symbol">&#8595;</span>Export</button>
+          <button class="button danger" id="clearLogs">Clear</button>
+        </div>
+      </div>
+      <pre class="log-output" id="logs">Loading runtime logs...</pre>
+    </section>
   </main>
-  <div class="notice" id="notice"></div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+  <div class="modal-backdrop" id="confirmModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+      <div class="modal-body"><h3 id="confirmTitle">Confirm action</h3><p id="confirmMessage"></p></div>
+      <div class="modal-actions"><button class="button ghost" id="confirmCancel">Cancel</button><button class="button primary" id="confirmAccept">Continue</button></div>
+    </div>
+  </div>
+
   <script>
     const token = new URLSearchParams(location.search).get('token') || '';
     const query = path => `${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
-    const scriptsBody = document.querySelector('#scripts'); let allScripts=[];
-    const notice = (message,error=false) => { const el=document.querySelector('#notice'); el.textContent=message; el.className=`notice ${error?'error':''}`; el.style.display='block'; clearTimeout(notice.timer); notice.timer=setTimeout(()=>el.style.display='none',4200); };
-    async function api(path,options={}) { const response=await fetch(query(path),options); const payload=await response.json(); if(!response.ok||!payload.ok)throw new Error(payload.error||payload.result||'Request failed'); return payload; }
-    const escapeHTML=value=>{const el=document.createElement('span');el.textContent=value||'';return el.innerHTML;};
-    const confirmAction=(question,work)=>{if(window.confirm(question))work();};
-    function renderScripts(){const search=document.querySelector('#filter').value.trim().toLowerCase();const items=allScripts.filter(script=>`${script.name} ${script.path}`.toLowerCase().includes(search));if(!items.length){scriptsBody.innerHTML='<tr><td class="empty" colspan="3">No matching scripts.</td></tr>';return;}scriptsBody.innerHTML=items.map(script=>`<tr><td><div class="name">${escapeHTML(script.name)}</div><div class="path">${escapeHTML(script.path)}</div></td><td><span class="type ${script.type==='raw'?'raw':''}">${escapeHTML(script.type||'script')}</span></td><td><div class="tools"><button class="primary run" data-path="${encodeURIComponent(script.path)}" data-name="${encodeURIComponent(script.name)}">Run</button><button class="download" data-path="${encodeURIComponent(script.path)}">Download</button></div></td></tr>`).join('');scriptsBody.querySelectorAll('.run').forEach(button=>button.onclick=()=>confirmAction(`Run ${decodeURIComponent(button.dataset.name)}?`,()=>runScript(decodeURIComponent(button.dataset.path))));scriptsBody.querySelectorAll('.download').forEach(button=>button.onclick=()=>location.href=query(`/api/download?path=${encodeURIComponent(decodeURIComponent(button.dataset.path))}`));}
-    async function loadScripts(){const payload=await api('/api/scripts');allScripts=payload.scripts;const select=document.querySelector('#assetScript');select.innerHTML='';allScripts.forEach(script=>{const option=document.createElement('option');option.value=script.path;option.textContent=script.name;select.appendChild(option);});renderScripts();}
-    async function loadStatus(){const {status}=await api('/api/status');const online=Boolean(status.serviceOnline);document.querySelector('#service').textContent=online?'Online':'Unavailable';document.querySelector('#serviceDot').classList.toggle('online',online);document.querySelector('#connection').textContent=online?'ZXTouch service connected':'ZXTouch service unavailable';document.querySelector('#screen').textContent=status.screen.width&&status.screen.height?`${Math.round(Number(status.screen.width))} x ${Math.round(Number(status.screen.height))}`:'-';document.querySelector('#orientation').textContent=status.orientation||'-';document.querySelector('#battery').textContent=status.battery?`${Math.round(Number(status.battery))}%`:'-';document.querySelector('#foreground').textContent=status.foregroundApp||'-';document.querySelector('#activity').textContent=status.recording?'Recording':(status.scriptPlaying?'Script running':'Idle');document.querySelector('#recordingState').textContent=status.recording?'Recording':'Idle';document.querySelector('#lastAction').textContent=status.lastAction||'-';document.querySelector('#socketState').textContent=online?'Connected':'Offline';document.querySelector('#port').textContent=status.port||'-';document.querySelector('#scriptCount').textContent=status.scriptCount??'-';document.querySelector('#lastError').textContent=status.lastError||'None';}
-    async function loadLogs(){const payload=await api('/api/logs');const log=document.querySelector('#logs');const stick=log.scrollTop+log.clientHeight>=log.scrollHeight-12;log.textContent=payload.logs||'No log output yet.';if(stick)log.scrollTop=log.scrollHeight;}
-    async function runScript(path){try{await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})});notice('Script start requested');loadStatus();}catch(error){notice(error.message,true);}}
-    async function refresh(){try{await Promise.all([loadScripts(),loadStatus(),loadLogs()]);}catch(error){notice(error.message,true);}}
-    document.querySelector('#refresh').onclick=refresh;document.querySelector('#filter').oninput=renderScripts;
-    document.querySelector('#stop').onclick=()=>confirmAction('Stop the active script?',async()=>{try{await api('/api/stop',{method:'POST'});notice('Stop requested');loadStatus();}catch(error){notice(error.message,true);}});
-    document.querySelector('#recordStart').onclick=()=>confirmAction('Start a new touch recording?',async()=>{try{await api('/api/record/start',{method:'POST'});notice('Recording started');loadStatus();}catch(error){notice(error.message,true);}});
-    document.querySelector('#recordStop').onclick=()=>confirmAction('Stop and save the current recording?',async()=>{try{await api('/api/record/stop',{method:'POST'});notice('Recording saved');await refresh();}catch(error){notice(error.message,true);}});
-    document.querySelector('#clearLogs').onclick=()=>confirmAction('Clear the runtime log?',async()=>{try{await api('/api/logs/clear',{method:'POST'});notice('Logs cleared');loadLogs();loadStatus();}catch(error){notice(error.message,true);}});
-    document.querySelector('#assetForm').onsubmit=event=>{event.preventDefault();const form=event.currentTarget;if(!window.confirm(`Upload ${form.asset.files[0]?.name||'this file'} to the selected script?`))return;api('/api/assets',{method:'POST',body:new FormData(form)}).then(payload=>{notice(`Uploaded ${payload.file}`);form.reset();loadStatus();}).catch(error=>notice(error.message,true));};
-    refresh();setInterval(()=>{loadStatus().catch(()=>{});loadLogs().catch(()=>{});},2500);
+    const elements = Object.fromEntries(Array.from(document.querySelectorAll('[id]')).map(element => [element.id, element]));
+    const state = { scripts: [], scriptFilter: 'all', status: null, rawLogs: '', confirming: null };
+    const orientationNames = { '1': 'Portrait', '2': 'Portrait upside down', '3': 'Landscape right', '4': 'Landscape left' };
+
+    function escapeHTML(value) {
+      const span = document.createElement('span');
+      span.textContent = String(value || '');
+      return span.innerHTML;
+    }
+
+    function showToast(message, error = false) {
+      elements.toast.textContent = message;
+      elements.toast.className = `toast${error ? ' error' : ''}`;
+      elements.toast.hidden = false;
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => { elements.toast.hidden = true; }, 4200);
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(query(path), options);
+      let payload;
+      try { payload = await response.json(); }
+      catch (_) { throw new Error(`Dashboard returned HTTP ${response.status}.`); }
+      if (!response.ok || !payload.ok) throw new Error(payload.error || payload.result || 'Request failed.');
+      return payload;
+    }
+
+    function ask(title, message, actionLabel = 'Continue', danger = false) {
+      if (state.confirming) state.confirming(false);
+      elements.confirmTitle.textContent = title;
+      elements.confirmMessage.textContent = message;
+      elements.confirmAccept.textContent = actionLabel;
+      elements.confirmAccept.className = `button ${danger ? 'danger' : 'primary'}`;
+      elements.confirmModal.hidden = false;
+      return new Promise(resolve => { state.confirming = resolve; });
+    }
+
+    function closeConfirmation(result) {
+      elements.confirmModal.hidden = true;
+      const resolve = state.confirming;
+      state.confirming = null;
+      if (resolve) resolve(result);
+    }
+
+    function setButtonBusy(button, busy, busyText) {
+      if (!button.dataset.label) button.dataset.label = button.innerHTML;
+      button.dataset.busy = busy ? '1' : '0';
+      button.disabled = busy;
+      button.innerHTML = busy ? busyText : button.dataset.label;
+    }
+
+    function scriptType(script) {
+      return script.type === 'raw' ? 'raw' : 'py';
+    }
+
+    function renderScripts() {
+      const search = elements.scriptSearch.value.trim().toLowerCase();
+      const visible = state.scripts.filter(script => {
+        const matchesType = state.scriptFilter === 'all' || scriptType(script) === state.scriptFilter;
+        const matchesSearch = `${script.name} ${script.path} ${script.entry}`.toLowerCase().includes(search);
+        return matchesType && matchesSearch;
+      });
+      elements.scriptSummary.textContent = `${visible.length} of ${state.scripts.length} scripts`;
+      if (!visible.length) {
+        elements.scripts.innerHTML = '<div class="empty-state">No scripts match this view.</div>';
+        return;
+      }
+      elements.scripts.innerHTML = visible.map(script => {
+        const type = scriptType(script);
+        const encodedPath = encodeURIComponent(script.path);
+        const encodedName = encodeURIComponent(script.name);
+        return `<article class="script-row"><div class="script-type ${type === 'raw' ? 'raw' : ''}">${type === 'raw' ? 'RAW' : 'PY'}</div><div class="script-copy"><div class="script-name">${escapeHTML(script.name)}</div><div class="script-path">${escapeHTML(script.entry || script.path)}</div></div><div class="script-actions"><button class="button primary run-script" data-path="${encodedPath}" data-name="${encodedName}"><span class="button-symbol">&#9654;</span>Run</button><button class="icon-button download-script" data-path="${encodedPath}" title="Download script" aria-label="Download ${escapeHTML(script.name)}">&#8595;</button></div></article>`;
+      }).join('');
+      elements.scripts.querySelectorAll('.run-script').forEach(button => {
+        button.addEventListener('click', () => confirmRun(button));
+      });
+      elements.scripts.querySelectorAll('.download-script').forEach(button => {
+        button.addEventListener('click', () => { location.href = query(`/api/download?path=${encodeURIComponent(decodeURIComponent(button.dataset.path))}`); });
+      });
+    }
+
+    async function loadScripts() {
+      const payload = await api('/api/scripts');
+      state.scripts = payload.scripts || [];
+      elements.assetScript.innerHTML = '';
+      state.scripts.forEach(script => {
+        const option = document.createElement('option');
+        option.value = script.path;
+        option.textContent = script.name;
+        elements.assetScript.appendChild(option);
+      });
+      elements.uploadButton.disabled = state.scripts.length === 0;
+      renderScripts();
+    }
+
+    function renderStatus(status) {
+      state.status = status;
+      const online = Boolean(status.serviceOnline);
+      const orientation = String(status.orientation || '');
+      const battery = Number(status.battery);
+      elements.service.textContent = online ? 'Online' : 'Unavailable';
+      elements.service.className = `metric-value ${online ? 'good' : 'bad'}`;
+      elements.serviceDot.classList.toggle('online', online);
+      elements.connectionText.textContent = online ? 'Service connected' : 'Service offline';
+      elements.offlineBanner.hidden = online;
+      elements.activity.textContent = status.recording ? 'Recording' : (status.scriptPlaying ? 'Script running' : 'Idle');
+      elements.screen.textContent = status.screen.width && status.screen.height ? `${Math.round(Number(status.screen.width))} x ${Math.round(Number(status.screen.height))}` : '-';
+      elements.orientation.textContent = orientation ? `${orientation} / ${orientationNames[orientation] || 'Unknown'}` : '-';
+      elements.battery.textContent = Number.isFinite(battery) ? `${Math.round(battery)}%` : '-';
+      elements.foreground.textContent = status.foregroundApp || '-';
+      elements.foreground.title = status.foregroundApp || 'Foreground app';
+      elements.lastAction.textContent = status.lastAction || 'Ready';
+      elements.recordingState.textContent = status.recording ? 'Recording in progress' : 'Idle';
+      elements.socketState.textContent = online ? 'Connected' : 'Offline';
+      elements.port.textContent = status.port || '8080';
+      elements.scriptCount.textContent = status.scriptCount ?? state.scripts.length;
+      elements.lastError.textContent = status.lastError || 'None';
+      elements.stop.disabled = !online || !status.scriptPlaying;
+      elements.recordStart.disabled = !online || status.recording;
+      elements.recordStop.disabled = !online || !status.recording;
+      elements.scripts.querySelectorAll('.run-script').forEach(button => {
+        if (button.dataset.busy !== '1') button.disabled = !online;
+      });
+    }
+
+    async function loadStatus() {
+      const payload = await api('/api/status');
+      renderStatus(payload.status);
+    }
+
+    function renderLogs() {
+      const filter = elements.logFilter.value.trim().toLowerCase();
+      const lines = state.rawLogs ? state.rawLogs.split(/\r?\n/) : [];
+      const visible = filter ? lines.filter(line => line.toLowerCase().includes(filter)) : lines;
+      const stick = elements.autoFollow.checked || elements.logs.scrollTop + elements.logs.clientHeight >= elements.logs.scrollHeight - 16;
+      elements.logs.textContent = visible.join('\n') || 'No runtime log output yet.';
+      elements.logSummary.textContent = `${visible.length} visible line${visible.length === 1 ? '' : 's'}`;
+      if (stick) elements.logs.scrollTop = elements.logs.scrollHeight;
+    }
+
+    async function loadLogs() {
+      const payload = await api('/api/logs');
+      state.rawLogs = payload.logs || '';
+      renderLogs();
+    }
+
+    async function confirmRun(button) {
+      const name = decodeURIComponent(button.dataset.name);
+      if (!await ask('Run script?', `${name} will start immediately on the iPad.`, 'Run script')) return;
+      setButtonBusy(button, true, 'Starting...');
+      try {
+        await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: decodeURIComponent(button.dataset.path) }) });
+        showToast(`${name} started.`);
+        await loadStatus();
+      } catch (error) { showToast(error.message, true); }
+      finally { setButtonBusy(button, false); }
+    }
+
+    async function stopScript() {
+      if (!await ask('Stop active script?', 'The current script will stop immediately.', 'Stop script', true)) return;
+      setButtonBusy(elements.stop, true, 'Stopping...');
+      try { await api('/api/stop', { method: 'POST' }); showToast('Stop requested.'); await loadStatus(); }
+      catch (error) { showToast(error.message, true); }
+      finally { setButtonBusy(elements.stop, false); if (state.status) renderStatus(state.status); }
+    }
+
+    async function changeRecording(start) {
+      const title = start ? 'Start touch recording?' : 'Stop and save recording?';
+      const message = start ? 'ZXTouch will record touch input until you stop it.' : 'The current recording will be saved to your script library.';
+      if (!await ask(title, message, start ? 'Start recording' : 'Stop and save', !start)) return;
+      const button = start ? elements.recordStart : elements.recordStop;
+      setButtonBusy(button, true, start ? 'Starting...' : 'Saving...');
+      try {
+        await api(start ? '/api/record/start' : '/api/record/stop', { method: 'POST' });
+        showToast(start ? 'Recording started.' : 'Recording saved.');
+        await Promise.all([loadStatus(), start ? Promise.resolve() : loadScripts()]);
+      } catch (error) { showToast(error.message, true); }
+      finally { setButtonBusy(button, false); if (state.status) renderStatus(state.status); }
+    }
+
+    async function uploadAsset(event) {
+      event.preventDefault();
+      const file = elements.assetFile.files[0];
+      const scriptName = elements.assetScript.options[elements.assetScript.selectedIndex]?.textContent || 'selected script';
+      if (!file) { showToast('Choose an asset file first.', true); return; }
+      if (file.size > 25 * 1024 * 1024) { showToast('Assets must be 25 MB or smaller.', true); return; }
+      if (file.name.toLowerCase() === 'info.plist') { showToast('info.plist cannot be overwritten from the dashboard.', true); return; }
+      if (!await ask('Upload asset?', `${file.name} will be added to ${scriptName}.`, 'Upload asset')) return;
+      setButtonBusy(elements.uploadButton, true, 'Uploading...');
+      try {
+        const payload = await api('/api/assets', { method: 'POST', body: new FormData(event.currentTarget) });
+        showToast(`${payload.file} uploaded.`);
+        elements.assetFile.value = '';
+        await loadStatus();
+      } catch (error) { showToast(error.message, true); }
+      finally { setButtonBusy(elements.uploadButton, false); }
+    }
+
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+      return Promise.resolve();
+    }
+
+    async function clearLogs() {
+      if (!await ask('Clear runtime logs?', 'This removes the current log output from the device.', 'Clear logs', true)) return;
+      try { await api('/api/logs/clear', { method: 'POST' }); state.rawLogs = ''; renderLogs(); showToast('Runtime logs cleared.'); await loadStatus(); }
+      catch (error) { showToast(error.message, true); }
+    }
+
+    async function refreshAll() {
+      setButtonBusy(elements.refresh, true, '&#8230;');
+      try { await Promise.all([loadScripts(), loadStatus(), loadLogs()]); }
+      catch (error) { showToast(error.message, true); }
+      finally { setButtonBusy(elements.refresh, false); }
+    }
+
+    elements.confirmCancel.addEventListener('click', () => closeConfirmation(false));
+    elements.confirmAccept.addEventListener('click', () => closeConfirmation(true));
+    elements.confirmModal.addEventListener('click', event => { if (event.target === elements.confirmModal) closeConfirmation(false); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && !elements.confirmModal.hidden) closeConfirmation(false); });
+    elements.refresh.addEventListener('click', refreshAll);
+    elements.stop.addEventListener('click', stopScript);
+    elements.recordStart.addEventListener('click', () => changeRecording(true));
+    elements.recordStop.addEventListener('click', () => changeRecording(false));
+    elements.assetForm.addEventListener('submit', uploadAsset);
+    elements.scriptSearch.addEventListener('input', renderScripts);
+    elements.logFilter.addEventListener('input', renderLogs);
+    document.querySelectorAll('.segment').forEach(button => button.addEventListener('click', () => {
+      state.scriptFilter = button.dataset.filter;
+      document.querySelectorAll('.segment').forEach(segment => segment.classList.toggle('active', segment === button));
+      renderScripts();
+    }));
+    elements.copyLogs.addEventListener('click', async () => { try { await copyText(state.rawLogs); showToast('Logs copied.'); } catch (_) { showToast('Unable to copy logs.', true); } });
+    elements.downloadLogs.addEventListener('click', () => {
+      const url = URL.createObjectURL(new Blob([state.rawLogs], { type: 'text/plain' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `zxtouch-logs-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    elements.clearLogs.addEventListener('click', clearLogs);
+
+    refreshAll();
+    setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      loadStatus().catch(() => {});
+      loadLogs().catch(() => {});
+    }, 3000);
   </script>
 </body>
 </html>
