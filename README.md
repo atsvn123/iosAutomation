@@ -24,6 +24,9 @@ This fork has been actively revived for modern rootless jailbreaks. Recent relea
 - Easier script selection for trigger actions, without manually pasting `.bdl` paths
 - Hardened Python runtime setup for fresh installs, including better fallback paths and visible script error diagnostics
 - Floating panel script settings now persist correctly, and turning them off runs scripts once without leaking old repeat values
+- Built-in recording editor for raw recordings, with timeline editing and action insertion
+- Token-protected remote dashboard for scripts, recording, logs, assets, and live device status
+- Persistent dashboard hosting through SpringBoard, so closing the ZXTouch app does not stop the server
 
 The built-in automation system currently supports assigning actions to Volume Up, Volume Down, and Home button click patterns. Each trigger can use 1-5 clicks and can run one of these actions:
 
@@ -62,6 +65,9 @@ The built-in automation system currently supports assigning actions to Volume Up
 - **Built-in automation triggers** — assign button click patterns to panel, recording, stop, or run-script actions
 - **Native script prompts** — Python scripts can request user input with `prompt_input(...)`
 - **Panel playback settings fixed** - the panel remembers whether settings mode is enabled and disabling it clears repeat/speed leakage for direct play
+- **Recording editor** - tap a raw recording bundle to edit, reorder, duplicate, delete, save, and test its actions
+- **Persistent remote dashboard** - control ZXTouch from another device on the same Wi-Fi, even while the app is closed
+- **Modern dashboard workspaces** - focused Scripts, Assets, Logs, and Device views with responsive phone and desktop layouts
 
 ---
 
@@ -125,7 +131,19 @@ Demo #6: [Color Picker](https://youtu.be/tserB05_B9E)
    - Touch recording and playback
 2. **GUI Application**
 3. **iOS Shortcuts Integration** — all actions available as Shortcuts actions
-4. **Others**
+4. **Recording Editor**
+   - Edit raw recording actions directly from the script list
+   - Reorder, duplicate, delete, and adjust timeline steps
+   - Insert taps, swipes, waits, toast messages, and app launches
+   - Save and test the edited recording without leaving the editor
+5. **Remote Dashboard**
+   - Run, stop, filter, and download scripts from a browser
+   - Start, stop, and save touch recordings remotely
+   - Upload image-matching assets into script bundles with path and size safeguards
+   - View, filter, copy, export, and clear live logs
+   - Inspect service state, display size, orientation, battery, foreground app, and diagnostics
+   - Token-protected access on the local network; the server remains available after the app closes
+6. **Others**
    - Bring application to foreground
    - System-wide alert box
    - Shell command execution
@@ -167,6 +185,29 @@ The app keeps a script registry at:
 ```
 
 The registry helps the app display script metadata, icons, README previews, and script selections for automation actions.
+
+### Recording Editor
+
+Tap a `.bdl` bundle whose entry file is a raw recording to open its timeline editor. From there you can:
+
+- Tap a step to edit its coordinates, delay, toast text, app identifier, or raw command
+- Reorder steps in edit mode
+- Swipe a step to duplicate it, or delete unwanted steps
+- Insert a tap, swipe, wait, toast, or app launch
+- Save the recording and play the edited result immediately
+
+### Remote Dashboard
+
+Enable **Settings -> Web Server** and tap the dashboard URL row to copy the private address. Open that address from a phone, tablet, or computer on the same Wi-Fi network.
+
+The dashboard includes four focused workspaces:
+
+- **Scripts:** search and filter the library, run or stop scripts, download entries, and control recording
+- **Assets:** upload files such as image-matching templates directly into a selected script bundle
+- **Logs:** follow, filter, copy, export, or clear runtime output
+- **Device:** inspect live service, display, orientation, battery, foreground app, and server diagnostics
+
+The URL contains a private access token. Do not share it outside your local network. Dashboard hosting runs inside SpringBoard, so it remains available when the ZXTouch app is closed.
 
 ### Automation Triggers
 
