@@ -1,18 +1,30 @@
+#if ZX_DASHBOARD_SPRINGBOARD_SERVER
+#import "../../pccontrol/RemoteDashboardServer.h"
+#import <sys/socket.h>
+#import <sys/time.h>
+#import <unistd.h>
+#else
 #import "RemoteDashboardServer.h"
+#endif
 
 #import <arpa/inet.h>
 #import <ifaddrs.h>
+#import <notify.h>
 
 #import "Config.h"
+#if !ZX_DASHBOARD_SPRINGBOARD_SERVER
 #import "Socket.h"
+#endif
 #import "GCDWebServer.h"
 #import "GCDWebServerDataRequest.h"
 #import "GCDWebServerDataResponse.h"
 #import "GCDWebServerFileResponse.h"
 #import "GCDWebServerMultiPartFormRequest.h"
 
-static NSString *const ZXDashboardEnabledKey = @"zxtouch_remote_dashboard_enabled";
-static NSString *const ZXDashboardTokenKey = @"zxtouch_remote_dashboard_token";
+static NSString *const ZXDashboardConfigPath = @"/var/mobile/Library/ZXTouch/config/tweak/remote_dashboard.plist";
+static NSString *const ZXDashboardEnabledKey = @"enabled";
+static NSString *const ZXDashboardTokenKey = @"token";
+static const char *ZXDashboardConfigurationNotification = "com.zjx.zxtouch.remote-dashboard-changed";
 static const unsigned long long ZXDashboardMaximumAssetSize = 25ULL * 1024ULL * 1024ULL;
 static const NSUInteger ZXDashboardMaximumLogLength = 256 * 1024;
 
@@ -38,6 +50,8 @@ static NSString *ZXDashboardIPAddress(void)
     return address;
 }
 
+#if ZX_DASHBOARD_SPRINGBOARD_SERVER
+
 @interface ZXRemoteDashboardServer : NSObject
 @property(nonatomic, strong) GCDWebServer *server;
 @property(nonatomic, copy) NSString *token;
@@ -47,16 +61,11 @@ static NSString *ZXDashboardIPAddress(void)
 
 @implementation ZXRemoteDashboardServer
 
-- (instancetype)init
+- (instancetype)initWithToken:(NSString *)token
 {
     self = [super init];
     if (self) {
-        NSString *token = [[NSUserDefaults standardUserDefaults] stringForKey:ZXDashboardTokenKey];
-        if (token.length == 0) {
-            token = [[NSUUID UUID].UUIDString stringByReplacingOccurrencesOfString:@"-" withString:@""];
-            [[NSUserDefaults standardUserDefaults] setObject:token forKey:ZXDashboardTokenKey];
-        }
-        _token = token;
+        _token = [token copy];
         _lastAction = @"Ready";
     }
     return self;
@@ -125,14 +134,34 @@ static NSString *ZXDashboardIPAddress(void)
 
 - (NSString *)sendSocketCommand:(NSString *)command expectsReply:(BOOL)expectsReply
 {
-    Socket *socket = [[Socket alloc] init];
-    if ([socket connect:@"127.0.0.1" byPort:6000] != 0) {
-        self.lastError = @"Unable to connect to the local ZXTouch service.";
+    int socketHandle = socket(AF_INET, SOCK_STREAM, 0);
+    if (socketHandle < 0) {
+        self.lastError = @"Unable to create a local ZXTouch connection.";
         return @"-1;;ZXTouch service is unavailable.";
     }
-    [socket send:command];
-    NSString *result = expectsReply ? [socket recv:4096] : @"0";
-    [socket close];
+    struct sockaddr_in address;
+    memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET;
+    address.sin_port = htons(6000);
+    inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);
+    struct timeval timeout = {2, 0};
+    setsockopt(socketHandle, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    setsockopt(socketHandle, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+    if (connect(socketHandle, (struct sockaddr *)&address, sizeof(address)) != 0) {
+        self.lastError = @"Unable to connect to the local ZXTouch service.";
+        close(socketHandle);
+        return @"-1;;ZXTouch service is unavailable.";
+    }
+    const char *message = command.UTF8String;
+    if (send(socketHandle, message, strlen(message), 0) < 0) {
+        self.lastError = @"Unable to send a command to the local ZXTouch service.";
+        close(socketHandle);
+        return @"-1;;ZXTouch service is unavailable.";
+    }
+    char buffer[4096] = {0};
+    ssize_t length = expectsReply ? recv(socketHandle, buffer, sizeof(buffer) - 1, 0) : 1;
+    close(socketHandle);
+    NSString *result = expectsReply && length > 0 ? [NSString stringWithUTF8String:buffer] : (expectsReply ? @"" : @"0");
     if (result.length == 0 || [result hasPrefix:@"-1"]) {
         self.lastError = result.length ? result : @"The local ZXTouch service did not return a response.";
     } else {
@@ -194,8 +223,8 @@ static NSString *ZXDashboardIPAddress(void)
 
 - (NSString *)dashboardHTML
 {
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"index" ofType:@"html" inDirectory:@"http"];
-    if (!path) path = [[NSBundle mainBundle] pathForResource:@"index" ofType:@"html"];
+    NSString *path = @"/var/jb/Applications/zxtouch.app/http/index.html";
+    if (![[NSFileManager defaultManager] fileExistsAtPath:path]) path = nil;
     NSString *html = path ? [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil] : nil;
     return html ?: @"<h1>ZXTouch Dashboard is unavailable.</h1>";
 }
@@ -318,7 +347,6 @@ static NSString *ZXDashboardIPAddress(void)
     NSError *error = nil;
     BOOL started = [self.server startWithOptions:@{
         GCDWebServerOption_Port: @8080,
-        GCDWebServerOption_BonjourName: @"ZXTouch",
         GCDWebServerOption_ServerName: @"ZXTouch Dashboard",
         GCDWebServerOption_AutomaticallySuspendInBackground: @NO
     } error:&error];
@@ -333,39 +361,95 @@ static NSString *ZXDashboardIPAddress(void)
     self.server = nil;
 }
 
-- (NSString *)dashboardURL
-{
-    NSString *host = ZXDashboardIPAddress() ?: @"iPad-IP-address";
-    NSUInteger port = self.server.running ? self.server.port : 8080;
-    return [NSString stringWithFormat:@"http://%@:%lu/?token=%@", host, (unsigned long)port, self.token];
-}
-
 @end
 
 static ZXRemoteDashboardServer *ZXDashboardServer;
 
+void ZXDashboardReloadConfiguration(void)
+{
+    NSDictionary *configuration = [NSDictionary dictionaryWithContentsOfFile:ZXDashboardConfigPath];
+    if (![configuration isKindOfClass:[NSDictionary class]]) {
+        NSDictionary *legacy = [NSDictionary dictionaryWithContentsOfFile:@"/var/jb/var/mobile/Library/Preferences/com.zjx.zxtouch.plist"];
+        NSMutableDictionary *migrated = [NSMutableDictionary dictionary];
+        id legacyEnabled = legacy[@"zxtouch_remote_dashboard_enabled"];
+        NSString *legacyToken = [legacy[@"zxtouch_remote_dashboard_token"] isKindOfClass:[NSString class]] ? legacy[@"zxtouch_remote_dashboard_token"] : @"";
+        if (legacyEnabled) migrated[ZXDashboardEnabledKey] = legacyEnabled;
+        if (legacyToken.length) migrated[ZXDashboardTokenKey] = legacyToken;
+        if (migrated.count) [migrated writeToFile:ZXDashboardConfigPath atomically:YES];
+        configuration = migrated;
+    }
+    BOOL enabled = [configuration[ZXDashboardEnabledKey] boolValue];
+    NSString *token = [configuration[ZXDashboardTokenKey] isKindOfClass:[NSString class]] ? configuration[ZXDashboardTokenKey] : @"";
+    if (!enabled || token.length == 0) {
+        [ZXDashboardServer stop];
+        ZXDashboardServer = nil;
+        return;
+    }
+    if (ZXDashboardServer && ![ZXDashboardServer.token isEqualToString:token]) {
+        [ZXDashboardServer stop];
+        ZXDashboardServer = nil;
+    }
+    if (!ZXDashboardServer) ZXDashboardServer = [[ZXRemoteDashboardServer alloc] initWithToken:token];
+    [ZXDashboardServer start];
+}
+
+#else
+
+static NSString *ZXDashboardSettingsLastError = @"";
+
+static NSMutableDictionary *ZXDashboardConfiguration(void)
+{
+    NSDictionary *stored = [NSDictionary dictionaryWithContentsOfFile:ZXDashboardConfigPath];
+    if ([stored isKindOfClass:[NSDictionary class]]) return [stored mutableCopy];
+
+    NSMutableDictionary *configuration = [NSMutableDictionary dictionary];
+    NSUserDefaults *legacyDefaults = [NSUserDefaults standardUserDefaults];
+    id legacyEnabled = [legacyDefaults objectForKey:@"zxtouch_remote_dashboard_enabled"];
+    NSString *legacyToken = [legacyDefaults stringForKey:@"zxtouch_remote_dashboard_token"];
+    if (legacyEnabled) configuration[ZXDashboardEnabledKey] = legacyEnabled;
+    if (legacyToken.length) configuration[ZXDashboardTokenKey] = legacyToken;
+    return configuration;
+}
+
+static NSString *ZXDashboardToken(NSMutableDictionary *configuration)
+{
+    NSString *token = [configuration[ZXDashboardTokenKey] isKindOfClass:[NSString class]] ? configuration[ZXDashboardTokenKey] : @"";
+    if (token.length == 0) {
+        token = [[NSUUID UUID].UUIDString stringByReplacingOccurrencesOfString:@"-" withString:@""];
+        configuration[ZXDashboardTokenKey] = token;
+    }
+    return token;
+}
+
 BOOL ZXRemoteDashboardSetEnabled(BOOL enabled)
 {
-    if (!ZXDashboardServer) ZXDashboardServer = [[ZXRemoteDashboardServer alloc] init];
-    BOOL result = enabled ? [ZXDashboardServer start] : YES;
-    if (!enabled) [ZXDashboardServer stop];
-    [[NSUserDefaults standardUserDefaults] setBool:(enabled && result) forKey:ZXDashboardEnabledKey];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    return result;
+    NSMutableDictionary *configuration = ZXDashboardConfiguration();
+    ZXDashboardToken(configuration);
+    configuration[ZXDashboardEnabledKey] = @(enabled);
+    NSError *directoryError = nil;
+    [[NSFileManager defaultManager] createDirectoryAtPath:[ZXDashboardConfigPath stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:&directoryError];
+    BOOL saved = directoryError == nil && [configuration writeToFile:ZXDashboardConfigPath atomically:YES];
+    ZXDashboardSettingsLastError = saved ? @"" : (directoryError.localizedDescription ?: @"Unable to save Remote Dashboard settings.");
+    if (saved) notify_post(ZXDashboardConfigurationNotification);
+    return saved;
 }
 
 BOOL ZXRemoteDashboardIsEnabled(void)
 {
-    return ZXDashboardServer.server.running || [[NSUserDefaults standardUserDefaults] boolForKey:ZXDashboardEnabledKey];
+    return [ZXDashboardConfiguration()[ZXDashboardEnabledKey] boolValue];
 }
 
 NSString *ZXRemoteDashboardURL(void)
 {
-    if (!ZXDashboardServer) ZXDashboardServer = [[ZXRemoteDashboardServer alloc] init];
-    return [ZXDashboardServer dashboardURL];
+    NSMutableDictionary *configuration = ZXDashboardConfiguration();
+    NSString *token = ZXDashboardToken(configuration);
+    NSString *host = ZXDashboardIPAddress() ?: @"iPad-IP-address";
+    return [NSString stringWithFormat:@"http://%@:%d/?token=%@", host, 8080, token];
 }
 
 NSString *ZXRemoteDashboardLastError(void)
 {
-    return ZXDashboardServer.lastError ?: @"";
+    return ZXDashboardSettingsLastError ?: @"";
 }
+
+#endif

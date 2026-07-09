@@ -27,6 +27,7 @@
 
 #include "Touch.h"
 #include "SocketServer.h"
+#include "RemoteDashboardServer.h"
 #include "Common.h"
 #include "Screen.h"
 #include "AlertBox.h"
@@ -49,6 +50,7 @@
 
 
 int daemonSock = -1;
+static int remoteDashboardNotificationToken = 0;
 
 
 typedef struct　eventInfo_s* eventInfo;
@@ -407,4 +409,10 @@ Boolean init()
 
 %ctor {
     %init;
+    notify_register_dispatch("com.zjx.zxtouch.remote-dashboard-changed", &remoteDashboardNotificationToken, dispatch_get_main_queue(), ^(int token) {
+        ZXDashboardReloadConfiguration();
+    });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        ZXDashboardReloadConfiguration();
+    });
 }

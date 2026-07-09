@@ -21,10 +21,8 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
 
-    // Dark mode is applied in SceneDelegate when the window is ready
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"zxtouch_remote_dashboard_enabled"]) {
-        ZXRemoteDashboardSetEnabled(YES);
-    }
+    // SpringBoard owns the dashboard process; this migrates older settings and notifies it.
+    ZXRemoteDashboardSetEnabled(ZXRemoteDashboardIsEnabled());
     
     return YES;
 }
