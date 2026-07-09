@@ -223,7 +223,7 @@ static NSString *ZXDashboardIPAddress(void)
 
 - (NSString *)dashboardHTML
 {
-    NSString *path = @"/var/jb/Applications/zxtouch.app/http/index.html";
+    NSString *path = @"/var/jb/Applications/zxtouch.app/index.html";
     if (![[NSFileManager defaultManager] fileExistsAtPath:path]) path = nil;
     NSString *html = path ? [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil] : nil;
     return html ?: @"<h1>ZXTouch Dashboard is unavailable.</h1>";
