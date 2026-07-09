@@ -202,7 +202,6 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     BOOL shouldLockToPortrait = !supportsLandscape;
     if (indicatorLocksToPortrait != shouldLockToPortrait) {
         indicatorLocksToPortrait = shouldLockToPortrait;
-        [touchIndicatorWindow refreshRotationPolicy];
         appendTouchIndicatorDebugLog([NSString stringWithFormat:@"rotationPolicy portraitLock=%d bundle=%@\n",
                                       indicatorLocksToPortrait, bundleIdentifier ?: @"unknown"]);
     }
@@ -219,6 +218,18 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     }
 
     return selectedOrientation;
+}
+
+static void refreshCachedIndicatorOrientation(void)
+{
+    UIInterfaceOrientation previousOrientation = cachedOrientation;
+    BOOL previousPortraitLock = indicatorLocksToPortrait;
+    UIInterfaceOrientation selectedOrientation = currentIndicatorOrientation();
+
+    cachedOrientation = selectedOrientation;
+    if (previousOrientation != selectedOrientation || previousPortraitLock != indicatorLocksToPortrait) {
+        [touchIndicatorWindow refreshRotationPolicy];
+    }
 }
 
 void report_memory(void) {
@@ -300,6 +311,7 @@ void handleTouchIndicatorTaskWithRawData(UInt8* eventData, NSError **error)
 void stopTouchIndicator(NSError **error)
 {
     NSLog(@"com.zjx.springboard: Touch indicator turn off request");
+    [touchIndicatorWindow stopOrientationTracking];
     // set touch indicator window to nil
     touchIndicatorWindow = nil;
     // unregister callback
@@ -446,7 +458,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
             {
                 logNextIndicatorOrientation = YES;
                 logNextWindowGeometry = YES;
-                cachedOrientation = currentIndicatorOrientation();
+                refreshCachedIndicatorOrientation();
             }
 
             UIInterfaceOrientation ori = cachedInputOrientation;
@@ -503,6 +515,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
     TouchIndicatorView* touchIndicatorViewList[20];
     TouchIndicatorCoordinateView* coordinateView[20];
     UIColor* indicatorColor;
+    NSTimer* orientationRefreshTimer;
 }
 
 - (void)updateWindowFrameForOrientation:(UIInterfaceOrientation)orientation {
@@ -523,10 +536,23 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
     dispatch_async(dispatch_get_main_queue(), ^{
         _window.autoresizingMask = indicatorLocksToPortrait ? UIViewAutoresizingNone :
             (UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin);
-        if ([_window.rootViewController respondsToSelector:@selector(setNeedsUpdateOfSupportedInterfaceOrientations)]) {
+        if (@available(iOS 16.0, *)) {
             [_window.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
+        } else {
+            [UIViewController attemptRotationToDeviceOrientation];
         }
         [self updateWindowFrameForOrientation:cachedOrientation];
+    });
+}
+
+- (void)refreshOrientationState {
+    refreshCachedIndicatorOrientation();
+}
+
+- (void)stopOrientationTracking {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [orientationRefreshTimer invalidate];
+        orientationRefreshTimer = nil;
     });
 }
 
@@ -547,6 +573,13 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
             [_window setUserInteractionEnabled:NO];
             [_window setAutoresizingMask:18];
             [self updateWindowFrameForOrientation:cachedOrientation];
+
+            __weak TouchIndicatorWindow *weakSelf = self;
+            orientationRefreshTimer = [NSTimer scheduledTimerWithTimeInterval:0.2
+                                                                        repeats:YES
+                                                                          block:^(NSTimer *timer) {
+                [weakSelf refreshOrientationState];
+            }];
 
             indicatorColor = [UIColor colorWithRed:255 green:0 blue:0 alpha:0.5];
             //init indicator view list
