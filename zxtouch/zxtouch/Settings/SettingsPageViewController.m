@@ -156,6 +156,25 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     return @"gearshape";
 }
 
+- (NSArray<NSDictionary *> *)remoteManagementCells {
+    BOOL enabled = ZXRemoteDashboardIsEnabled();
+    NSMutableArray *cells = [NSMutableArray arrayWithObject:@{
+        @"type": @(SETTING_CELL_SWITCH),
+        @"title": NSLocalizedString(@"webServer", nil),
+        @"switch_click_handler": NSStringFromSelector(@selector(handleWebServerWithSwitchCellInstance:)),
+        @"switch_init_status": @(enabled)
+    }];
+    if (enabled) {
+        [cells addObject:@{
+            @"type": @(SETTING_CELL_ENTRY),
+            @"title": @"Dashboard URL",
+            @"secondary_title": @"Tap to view and copy",
+            @"row_click_handler": NSStringFromSelector(@selector(handleDashboardURLTap:))
+        }];
+    }
+    return cells;
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
@@ -180,9 +199,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     // [@{"type": ?, @"title": ?, @"content": ?, ... more depends on the cell type}]
     //
     cellsForEachSection = @[
-        @[
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"webServer", nil), @"switch_click_handler": NSStringFromSelector(@selector(handleWebServerWithSwitchCellInstance:)), @"switch_init_status": @(ZXRemoteDashboardIsEnabled())}
-        ],
+        [self remoteManagementCells],
         @[
             @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"touchIndicator", nil), @"secondary_title": @"", @"row_click_handler": NSStringFromSelector(@selector(handleTouchIndicatorWithEntryCellInstance:))},
             @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"doubleClickShowPopup", nil), @"switch_click_handler": NSStringFromSelector(@selector(handlePopupWindowDoubleClick:)), @"switch_init_status": @(doubleClickPopup)}
@@ -236,9 +253,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 
     sections = @[NSLocalizedString(@"remoteManagement", nil), NSLocalizedString(@"control", nil), @"Automation", NSLocalizedString(@"script", nil), @"Appearance", @"About"];
     cellsForEachSection = @[
-        @[
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"webServer", nil), @"switch_click_handler": NSStringFromSelector(@selector(handleWebServerWithSwitchCellInstance:)), @"switch_init_status": @(ZXRemoteDashboardIsEnabled())}
-        ],
+        [self remoteManagementCells],
         @[
             @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"touchIndicator", nil), @"secondary_title": @"", @"row_click_handler": NSStringFromSelector(@selector(handleTouchIndicatorWithEntryCellInstance:))},
             @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"doubleClickShowPopup", nil), @"switch_click_handler": NSStringFromSelector(@selector(handlePopupWindowDoubleClick:)), @"switch_init_status": @(doubleClickPopup)}
@@ -472,6 +487,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 - (void)handleWebServerWithSwitchCellInstance:(UISwitch*)s {
     if (![s isOn]) {
         ZXRemoteDashboardSetEnabled(NO);
+        [self reloadSettingsModel];
         return;
     }
 
@@ -486,6 +502,15 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 
     [Util showAlertBoxWithOneOption:self title:@"Remote Dashboard"
         message:[NSString stringWithFormat:@"Open this address from a device on the same Wi-Fi:\n\n%@", ZXRemoteDashboardURL()]
+        buttonString:@"OK"];
+    [self reloadSettingsModel];
+}
+
+- (void)handleDashboardURLTap:(TableViewCellWithEntry *)cell {
+    NSString *url = ZXRemoteDashboardURL();
+    UIPasteboard.generalPasteboard.string = url;
+    [Util showAlertBoxWithOneOption:self title:@"Dashboard URL"
+        message:[NSString stringWithFormat:@"%@\n\nCopied to the clipboard.", url]
         buttonString:@"OK"];
 }
 

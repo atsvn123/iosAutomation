@@ -13,6 +13,8 @@
 
 static NSString *const ZXDashboardEnabledKey = @"zxtouch_remote_dashboard_enabled";
 static NSString *const ZXDashboardTokenKey = @"zxtouch_remote_dashboard_token";
+static const unsigned long long ZXDashboardMaximumAssetSize = 25ULL * 1024ULL * 1024ULL;
+static const NSUInteger ZXDashboardMaximumLogLength = 256 * 1024;
 
 static NSString *ZXDashboardIPAddress(void)
 {
@@ -124,24 +126,43 @@ static NSString *ZXDashboardIPAddress(void)
 - (NSString *)sendSocketCommand:(NSString *)command expectsReply:(BOOL)expectsReply
 {
     Socket *socket = [[Socket alloc] init];
-    if ([socket connect:@"127.0.0.1" byPort:6000] != 0) return @"-1;;ZXTouch service is unavailable.";
+    if ([socket connect:@"127.0.0.1" byPort:6000] != 0) {
+        self.lastError = @"Unable to connect to the local ZXTouch service.";
+        return @"-1;;ZXTouch service is unavailable.";
+    }
     [socket send:command];
     NSString *result = expectsReply ? [socket recv:4096] : @"0";
     [socket close];
+    if (result.length == 0 || [result hasPrefix:@"-1"]) {
+        self.lastError = result.length ? result : @"The local ZXTouch service did not return a response.";
+    } else {
+        self.lastError = @"";
+    }
     return result ?: @"";
+}
+
+- (NSString *)payloadFromSocketReply:(NSString *)reply
+{
+    NSString *trimmed = [reply stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    return [trimmed hasPrefix:@"0;;"] ? [trimmed substringFromIndex:3] : trimmed;
 }
 
 - (NSDictionary *)status
 {
-    NSString *size = [self sendSocketCommand:@"251" expectsReply:YES];
-    NSString *orientation = [self sendSocketCommand:@"252" expectsReply:YES];
-    NSString *battery = [self sendSocketCommand:@"2531" expectsReply:YES];
-    NSString *runtime = [self sendSocketCommand:@"2532" expectsReply:YES];
+    NSString *rawSize = [self sendSocketCommand:@"251" expectsReply:YES];
+    NSString *rawOrientation = [self sendSocketCommand:@"252" expectsReply:YES];
+    NSString *rawBattery = [self sendSocketCommand:@"2531" expectsReply:YES];
+    NSString *rawRuntime = [self sendSocketCommand:@"2532" expectsReply:YES];
+    NSString *size = [self payloadFromSocketReply:rawSize];
+    NSString *orientation = [self payloadFromSocketReply:rawOrientation];
+    NSString *battery = [self payloadFromSocketReply:rawBattery];
+    NSString *runtime = [self payloadFromSocketReply:rawRuntime];
     NSArray *sizeParts = [size componentsSeparatedByString:@";;"];
     NSArray *batteryParts = [battery componentsSeparatedByString:@";;"];
     NSArray *runtimeParts = [runtime componentsSeparatedByString:@";;"];
     return @{
         @"running": @(self.server.running),
+        @"serviceOnline": @([rawSize hasPrefix:@"0"]),
         @"port": @(self.server.port),
         @"screen": @{ @"width": sizeParts.count > 0 ? sizeParts[0] : @"", @"height": sizeParts.count > 1 ? sizeParts[1] : @"" },
         @"orientation": orientation ?: @"",
@@ -150,8 +171,25 @@ static NSString *ZXDashboardIPAddress(void)
         @"scriptPlaying": runtimeParts.count > 1 ? @([runtimeParts[1] boolValue]) : @NO,
         @"recording": runtimeParts.count > 2 ? @([runtimeParts[2] boolValue]) : @NO,
         @"lastAction": self.lastAction ?: @"Ready",
+        @"lastError": self.lastError ?: @"",
         @"scriptCount": @([self scripts].count)
     };
+}
+
+- (NSString *)recentLogs
+{
+    NSString *logs = [NSString stringWithContentsOfFile:RUNTIME_OUTPUT_PATH encoding:NSUTF8StringEncoding error:nil] ?: @"";
+    if (logs.length <= ZXDashboardMaximumLogLength) return logs;
+    return [@"[Showing the newest log output.]\n" stringByAppendingString:[logs substringFromIndex:logs.length - ZXDashboardMaximumLogLength]];
+}
+
+- (BOOL)isSafeAssetFileName:(NSString *)fileName
+{
+    if (fileName.length == 0 || [fileName isEqualToString:@"."] || [fileName isEqualToString:@".."] ||
+        [fileName rangeOfCharacterFromSet:[NSCharacterSet characterSetWithCharactersInString:@"/\\"]].location != NSNotFound) {
+        return NO;
+    }
+    return [fileName caseInsensitiveCompare:@"info.plist"] != NSOrderedSame;
 }
 
 - (NSString *)dashboardHTML
@@ -187,8 +225,17 @@ static NSString *ZXDashboardIPAddress(void)
     [self.server addHandlerForMethod:@"GET" path:@"/api/logs" requestClass:[GCDWebServerRequest class] processBlock:^GCDWebServerResponse *(GCDWebServerRequest *request) {
         ZXRemoteDashboardServer *strongSelf = weakSelf;
         if (!strongSelf || ![strongSelf requestIsAuthorized:request]) return [strongSelf unauthorizedResponse];
-        NSString *logs = [NSString stringWithContentsOfFile:RUNTIME_OUTPUT_PATH encoding:NSUTF8StringEncoding error:nil] ?: @"";
-        return [strongSelf jsonResponse:@{ @"ok": @YES, @"logs": logs } status:200];
+        return [strongSelf jsonResponse:@{ @"ok": @YES, @"logs": [strongSelf recentLogs] } status:200];
+    }];
+
+    [self.server addHandlerForMethod:@"POST" path:@"/api/logs/clear" requestClass:[GCDWebServerDataRequest class] processBlock:^GCDWebServerResponse *(GCDWebServerDataRequest *request) {
+        ZXRemoteDashboardServer *strongSelf = weakSelf;
+        if (!strongSelf || ![strongSelf requestIsAuthorized:request]) return [strongSelf unauthorizedResponse];
+        NSError *error = nil;
+        [@"" writeToFile:RUNTIME_OUTPUT_PATH atomically:YES encoding:NSUTF8StringEncoding error:&error];
+        if (error) return [strongSelf jsonResponse:@{ @"ok": @NO, @"error": error.localizedDescription ?: @"Unable to clear logs." } status:500];
+        strongSelf.lastAction = @"Clear logs";
+        return [strongSelf jsonResponse:@{ @"ok": @YES } status:200];
     }];
 
     [self.server addHandlerForMethod:@"POST" path:@"/api/run" requestClass:[GCDWebServerDataRequest class] processBlock:^GCDWebServerResponse *(GCDWebServerDataRequest *request) {
@@ -233,8 +280,13 @@ static NSString *ZXDashboardIPAddress(void)
         NSString *bundlePath = [strongSelf bundlePathForRelativePath:relativePath];
         GCDWebServerMultiPartFile *upload = [request firstFileForControlName:@"asset"];
         NSString *fileName = upload.fileName.lastPathComponent;
-        if (!bundlePath || upload == nil || fileName.length == 0 || [fileName isEqualToString:@"info.plist"]) {
+        NSDictionary *attributes = upload.temporaryPath.length ? [[NSFileManager defaultManager] attributesOfItemAtPath:upload.temporaryPath error:nil] : nil;
+        unsigned long long size = [attributes fileSize];
+        if (!bundlePath || upload == nil || ![strongSelf isSafeAssetFileName:fileName]) {
             return [strongSelf jsonResponse:@{ @"ok": @NO, @"error": @"Choose a script and an asset file." } status:400];
+        }
+        if (size > ZXDashboardMaximumAssetSize) {
+            return [strongSelf jsonResponse:@{ @"ok": @NO, @"error": @"Assets must be 25 MB or smaller." } status:413];
         }
         NSString *destination = [bundlePath stringByAppendingPathComponent:fileName];
         [[NSFileManager defaultManager] removeItemAtPath:destination error:nil];

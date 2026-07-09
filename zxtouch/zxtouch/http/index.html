@@ -3,105 +3,71 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ZXTouch Dashboard</title>
+  <title>ZXTouch Control</title>
   <style>
-    :root { color-scheme: dark; --bg:#101114; --panel:#191b20; --line:#2d3037; --text:#f4f5f7; --muted:#a7aab3; --blue:#1689ff; --green:#29c978; --red:#ff5f57; --amber:#f1b84b; }
-    * { box-sizing:border-box; }
-    body { margin:0; font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
-    header { min-height:72px; padding:16px max(20px,calc((100vw - 1180px)/2)); display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid var(--line); background:#15171b; }
-    h1 { margin:0; font-size:20px; font-weight:700; letter-spacing:0; }
-    .subtitle { color:var(--muted); margin-top:3px; font-size:12px; }
-    main { max-width:1180px; margin:0 auto; padding:22px 20px 44px; display:grid; grid-template-columns:minmax(0,1.65fr) minmax(280px,.85fr); gap:18px; }
-    section { background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-    .full { grid-column:1/-1; }
-    .section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--line); }
-    h2 { margin:0; font-size:14px; font-weight:650; }
-    .status-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); padding:12px; gap:10px; }
-    .stat { border:1px solid var(--line); padding:12px; min-height:68px; border-radius:6px; background:#14161a; }
-    .stat span { display:block; color:var(--muted); font-size:11px; margin-bottom:7px; text-transform:uppercase; letter-spacing:.05em; }
-    .stat strong { font-size:15px; font-weight:600; overflow-wrap:anywhere; }
-    button, input, select { font:inherit; }
-    button { border:1px solid #3b404a; background:#252932; color:var(--text); padding:7px 10px; border-radius:5px; cursor:pointer; white-space:nowrap; }
-    button:hover { background:#303642; }
-    button.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
-    button.stop { color:#fff; background:#9e3531; border-color:#b5453f; }
-    button.record { color:#fff; background:#b3423c; border-color:#cf514b; }
-    button[disabled] { cursor:not-allowed; opacity:.5; }
-    .actions { display:flex; flex-wrap:wrap; gap:8px; }
-    table { border-collapse:collapse; width:100%; }
-    th, td { text-align:left; padding:12px 16px; border-bottom:1px solid var(--line); vertical-align:middle; }
-    th { color:var(--muted); font-weight:600; font-size:11px; letter-spacing:.04em; text-transform:uppercase; }
-    tr:last-child td { border-bottom:0; }
-    .script-name { font-weight:600; }
-    .script-path { color:var(--muted); font-size:12px; margin-top:3px; overflow-wrap:anywhere; }
-    .kind { display:inline-block; padding:3px 6px; border-radius:4px; font-size:11px; background:#243145; color:#9dc8ff; }
-    .kind.raw { background:#40301d; color:#f5c66d; }
-    .empty { color:var(--muted); text-align:center; padding:32px; }
-    pre { margin:0; padding:14px 16px; min-height:250px; max-height:430px; overflow:auto; font:12px ui-monospace,SFMono-Regular,Menlo,monospace; line-height:1.55; color:#d5dae4; background:#111318; white-space:pre-wrap; overflow-wrap:anywhere; }
-    .form { padding:14px 16px; display:grid; gap:10px; }
-    label { display:grid; gap:5px; color:var(--muted); font-size:12px; }
-    input, select { width:100%; min-width:0; color:var(--text); background:#111318; border:1px solid #3b404a; border-radius:5px; padding:9px; }
-    .notice { display:none; position:fixed; right:18px; bottom:18px; max-width:390px; background:#252932; border:1px solid #424956; border-left:3px solid var(--blue); padding:12px 14px; border-radius:6px; box-shadow:0 14px 34px rgba(0,0,0,.35); }
-    .notice.error { border-left-color:var(--red); }
-    @media (max-width:800px) { main { grid-template-columns:1fr; padding:14px; } header { padding:14px; } .full { grid-column:auto; } th:nth-child(2), td:nth-child(2) { display:none; } }
+    :root { color-scheme:dark; --page:#0d0f12; --surface:#15181d; --surface-2:#1c2027; --line:#303640; --text:#eff2f6; --muted:#949ca9; --blue:#1689ff; --cyan:#18b7bf; --green:#35c980; --amber:#f3bd53; --red:#e85c5c; }
+    * { box-sizing:border-box; } body { margin:0; min-width:320px; background:var(--page); color:var(--text); font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button,input,select { font:inherit; } button { min-height:32px; padding:6px 10px; border:1px solid var(--line); border-radius:5px; background:#242a33; color:var(--text); cursor:pointer; } button:hover { background:#303845; } button.primary { background:var(--blue); border-color:var(--blue); } button.danger { background:#762e32; border-color:#a6454a; } button.secondary { color:#b9dcff; }
+    header { height:68px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 max(18px,calc((100vw - 1240px)/2)); border-bottom:1px solid var(--line); background:#12151a; }
+    .brand { display:flex; align-items:center; gap:11px; } .mark { width:30px; height:30px; display:grid; place-items:center; border:1px solid #247bc6; color:#9fd0ff; background:#132638; border-radius:6px; font-weight:750; } h1 { margin:0; font-size:17px; letter-spacing:0; } .sub { margin-top:2px; color:var(--muted); font-size:12px; }
+    .connection { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; } .dot { width:8px; height:8px; border-radius:50%; background:var(--red); } .dot.online { background:var(--green); box-shadow:0 0 0 3px rgba(53,201,128,.12); }
+    main { max-width:1240px; margin:0 auto; padding:20px 18px 42px; } .metrics { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); border:1px solid var(--line); background:var(--surface); border-radius:7px; overflow:hidden; }
+    .metric { min-height:78px; padding:14px; border-right:1px solid var(--line); } .metric:last-child { border-right:0; } .metric label { display:block; margin-bottom:8px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; } .metric strong { display:block; overflow-wrap:anywhere; font-size:14px; font-weight:650; }
+    .grid { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(305px,.9fr); gap:16px; margin-top:16px; } .side { display:grid; align-content:start; gap:16px; } section { background:var(--surface); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+    .head { min-height:53px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; border-bottom:1px solid var(--line); } h2 { margin:0; font-size:13px; font-weight:700; } .tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .tools input { width:190px; min-height:32px; padding:6px 9px; border:1px solid var(--line); border-radius:5px; color:var(--text); background:#0f1115; }
+    table { width:100%; border-collapse:collapse; } th,td { padding:12px 14px; text-align:left; border-bottom:1px solid #2a3039; } th { color:var(--muted); font-size:10px; letter-spacing:.07em; text-transform:uppercase; } tr:last-child td { border-bottom:0; } .name { font-weight:650; } .path { margin-top:3px; color:var(--muted); font:11px ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; } .type { display:inline-block; padding:3px 6px; border-radius:4px; color:#9ed0ff; background:#132e48; font-size:11px; } .type.raw { color:#f6ca75; background:#3b2d19; } .empty { padding:32px; color:var(--muted); text-align:center; }
+    .control-list { display:grid; } .control { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 14px; border-bottom:1px solid var(--line); } .control:last-child { border-bottom:0; } .control-title { font-weight:600; } .control-detail { margin-top:3px; color:var(--muted); font-size:12px; }
+    .form { display:grid; gap:12px; padding:14px; } .form label { display:grid; gap:6px; color:var(--muted); font-size:12px; } .form select,.form input { width:100%; min-height:36px; padding:7px 9px; border:1px solid var(--line); border-radius:5px; color:var(--text); background:#0f1115; }
+    .diagnostics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; } .diagnostic { padding:12px 14px; border-right:1px solid var(--line); border-bottom:1px solid var(--line); } .diagnostic:nth-child(2n) { border-right:0; } .diagnostic-wide { grid-column:1/-1; border-bottom:0; } .diagnostic label { color:var(--muted); display:block; font-size:10px; letter-spacing:.07em; text-transform:uppercase; margin-bottom:6px; } .diagnostic strong { font-size:12px; overflow-wrap:anywhere; }
+    .logs { margin-top:16px; } pre { margin:0; min-height:250px; max-height:430px; overflow:auto; padding:14px; background:#0d0f13; color:#cbd3de; font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .notice { position:fixed; right:18px; bottom:18px; display:none; max-width:400px; padding:11px 13px; border:1px solid #424b59; border-left:3px solid var(--blue); border-radius:6px; background:#202630; box-shadow:0 16px 38px rgba(0,0,0,.38); } .notice.error { border-left-color:var(--red); }
+    @media (max-width:980px) { .metrics { grid-template-columns:repeat(3,1fr); } .metric:nth-child(3) { border-right:0; } .metric:nth-child(-n+3) { border-bottom:1px solid var(--line); } .grid { grid-template-columns:1fr; } } @media (max-width:620px) { header { height:auto; padding:12px 14px; align-items:flex-start; } .connection { margin-top:5px; } .metrics { grid-template-columns:repeat(2,1fr); } .metric:nth-child(2n) { border-right:0; } .metric { border-bottom:1px solid var(--line); } .metric:nth-last-child(-n+2) { border-bottom:0; } .tools input { width:100%; } th:nth-child(2),td:nth-child(2) { display:none; } }
   </style>
 </head>
 <body>
   <header>
-    <div><h1>ZXTouch Dashboard</h1><div class="subtitle" id="connection">Connecting...</div></div>
-    <div class="actions"><button id="refresh">Refresh</button><button class="stop" id="stop">Stop Script</button></div>
+    <div class="brand"><div class="mark">ZX</div><div><h1>ZXTouch Control</h1><div class="sub">Paired local dashboard</div></div></div>
+    <div class="connection"><span class="dot" id="serviceDot"></span><span id="connection">Checking service</span><button id="refresh">Refresh</button></div>
   </header>
   <main>
-    <section>
-      <div class="section-head"><h2>Scripts</h2><div class="actions"><button class="record" id="recordStart">Start Recording</button><button id="recordStop">Stop Recording</button></div></div>
-      <table><thead><tr><th>Script</th><th>Entry</th><th>Actions</th></tr></thead><tbody id="scripts"><tr><td class="empty" colspan="3">Loading scripts...</td></tr></tbody></table>
-    </section>
-    <section>
-      <div class="section-head"><h2>Device</h2></div>
-      <div class="status-grid">
-        <div class="stat"><span>Screen</span><strong id="screen">-</strong></div>
-        <div class="stat"><span>Orientation</span><strong id="orientation">-</strong></div>
-        <div class="stat"><span>Battery</span><strong id="battery">-</strong></div>
-        <div class="stat"><span>Foreground app</span><strong id="foregroundApp">-</strong></div>
-        <div class="stat"><span>Activity</span><strong id="activity">-</strong></div>
-        <div class="stat"><span>Last action</span><strong id="lastAction">-</strong></div>
-      </div>
-      <div class="section-head"><h2>Asset Upload</h2></div>
-      <form class="form" id="assetForm"><label>Script<select id="assetScript" name="script"></select></label><label>Asset<input name="asset" type="file" required></label><button class="primary" type="submit">Upload Asset</button></form>
-    </section>
-    <section class="full">
-      <div class="section-head"><h2>Live Logs</h2><div class="actions"><button id="clearLog">Clear</button></div></div>
-      <pre id="logs">Loading logs...</pre>
-    </section>
+    <div class="metrics">
+      <div class="metric"><label>Service</label><strong id="service">-</strong></div><div class="metric"><label>Screen</label><strong id="screen">-</strong></div><div class="metric"><label>Orientation</label><strong id="orientation">-</strong></div><div class="metric"><label>Battery</label><strong id="battery">-</strong></div><div class="metric"><label>Foreground App</label><strong id="foreground">-</strong></div><div class="metric"><label>Activity</label><strong id="activity">-</strong></div>
+    </div>
+    <div class="grid">
+      <section>
+        <div class="head"><h2>Script Library</h2><div class="tools"><input id="filter" type="search" placeholder="Filter scripts"></div></div>
+        <table><thead><tr><th>Script</th><th>Entry</th><th>Control</th></tr></thead><tbody id="scripts"><tr><td class="empty" colspan="3">Loading scripts...</td></tr></tbody></table>
+      </section>
+      <aside class="side">
+        <section><div class="head"><h2>Playback</h2></div><div class="control-list"><div class="control"><div><div class="control-title">Current Script</div><div class="control-detail" id="lastAction">-</div></div><button class="danger" id="stop">Stop</button></div><div class="control"><div><div class="control-title">Touch Recorder</div><div class="control-detail" id="recordingState">Idle</div></div><div class="tools"><button id="recordStart">Start</button><button id="recordStop">Stop</button></div></div></div></section>
+        <section><div class="head"><h2>Asset Upload</h2></div><form class="form" id="assetForm"><label>Script<select id="assetScript" name="script"></select></label><label>Asset File<input name="asset" type="file" required></label><button class="primary" type="submit">Upload Asset</button></form></section>
+        <section><div class="head"><h2>Diagnostics</h2></div><div class="diagnostics"><div class="diagnostic"><label>Socket</label><strong id="socketState">-</strong></div><div class="diagnostic"><label>Port</label><strong id="port">-</strong></div><div class="diagnostic"><label>Scripts</label><strong id="scriptCount">-</strong></div><div class="diagnostic"><label>Pairing</label><strong>Token required</strong></div><div class="diagnostic diagnostic-wide"><label>Last Error</label><strong id="lastError">None</strong></div></div></section>
+      </aside>
+    </div>
+    <section class="logs"><div class="head"><h2>Runtime Logs</h2><div class="tools"><button id="clearLogs">Clear Logs</button></div></div><pre id="logs">Loading logs...</pre></section>
   </main>
   <div class="notice" id="notice"></div>
   <script>
     const token = new URLSearchParams(location.search).get('token') || '';
     const query = path => `${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
-    const notice = (text, error=false) => { const el=document.querySelector('#notice'); el.textContent=text; el.className=`notice ${error?'error':''}`; el.style.display='block'; clearTimeout(notice.timer); notice.timer=setTimeout(()=>el.style.display='none',4200); };
-    async function api(path, options={}) { const response=await fetch(query(path), options); const payload=await response.json(); if(!response.ok || !payload.ok) throw new Error(payload.error || payload.result || 'Request failed'); return payload; }
-    function escapeHTML(value) { const node=document.createElement('span'); node.textContent=value || ''; return node.innerHTML; }
-    function run(path) { api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})}).then(()=>{notice('Script started');loadStatus();}).catch(error=>notice(error.message,true)); }
-    function downloadScript(path) { location.href=query(`/api/download?path=${encodeURIComponent(path)}`); }
-    async function loadScripts() {
-      const payload=await api('/api/scripts'); const body=document.querySelector('#scripts'); const select=document.querySelector('#assetScript');
-      select.innerHTML='';
-      if(!payload.scripts.length){ body.innerHTML='<tr><td class="empty" colspan="3">No scripts found.</td></tr>'; return; }
-      body.innerHTML=payload.scripts.map(script=>`<tr><td><div class="script-name">${escapeHTML(script.name)}</div><div class="script-path">${escapeHTML(script.path)}</div></td><td><span class="kind ${script.type==='raw'?'raw':''}">${escapeHTML(script.type || 'script')}</span></td><td><div class="actions"><button class="primary run-script" data-path="${encodeURIComponent(script.path)}">Run</button><button class="download-script" data-path="${encodeURIComponent(script.path)}">Download</button></div></td></tr>`).join('');
-      body.querySelectorAll('.run-script').forEach(button=>button.onclick=()=>run(decodeURIComponent(button.dataset.path)));
-      body.querySelectorAll('.download-script').forEach(button=>button.onclick=()=>downloadScript(decodeURIComponent(button.dataset.path)));
-      payload.scripts.forEach(script=>{const option=document.createElement('option');option.value=script.path;option.textContent=script.name;select.appendChild(option);});
-    }
-    async function loadStatus(){ const payload=await api('/api/status'); const status=payload.status; document.querySelector('#connection').textContent=`Local dashboard on port ${status.port}`; document.querySelector('#screen').textContent=`${status.screen.width || '-'} x ${status.screen.height || '-'}`; document.querySelector('#orientation').textContent=status.orientation || '-'; document.querySelector('#battery').textContent=status.battery ? `${Math.round(Number(status.battery))}%` : '-'; document.querySelector('#foregroundApp').textContent=status.foregroundApp || '-'; document.querySelector('#activity').textContent=status.recording ? 'Recording' : (status.scriptPlaying ? 'Script running' : 'Idle'); document.querySelector('#lastAction').textContent=status.lastAction || '-'; }
-    async function loadLogs(){ const payload=await api('/api/logs'); const log=document.querySelector('#logs'); const stick=log.scrollTop + log.clientHeight >= log.scrollHeight - 10; log.textContent=payload.logs || 'No logs yet.'; if(stick)log.scrollTop=log.scrollHeight; }
-    async function refresh(){ try{await Promise.all([loadScripts(),loadStatus(),loadLogs()]);}catch(error){notice(error.message,true);} }
-    document.querySelector('#refresh').onclick=refresh;
-    document.querySelector('#stop').onclick=()=>api('/api/stop',{method:'POST'}).then(()=>{notice('Stop requested');loadStatus();}).catch(error=>notice(error.message,true));
-    document.querySelector('#recordStart').onclick=()=>api('/api/record/start',{method:'POST'}).then(()=>{notice('Recording started');loadStatus();}).catch(error=>notice(error.message,true));
-    document.querySelector('#recordStop').onclick=()=>api('/api/record/stop',{method:'POST'}).then(()=>{notice('Recording stopped');refresh();}).catch(error=>notice(error.message,true));
-    document.querySelector('#assetForm').onsubmit=event=>{ event.preventDefault(); api('/api/assets',{method:'POST',body:new FormData(event.currentTarget)}).then(payload=>{notice(`Uploaded ${payload.file}`);event.currentTarget.reset();}).catch(error=>notice(error.message,true)); };
-    document.querySelector('#clearLog').onclick=()=>notice('Clear logs from the app log view.');
-    refresh(); setInterval(()=>{loadStatus().catch(()=>{});loadLogs().catch(()=>{});},2500);
+    const scriptsBody = document.querySelector('#scripts'); let allScripts=[];
+    const notice = (message,error=false) => { const el=document.querySelector('#notice'); el.textContent=message; el.className=`notice ${error?'error':''}`; el.style.display='block'; clearTimeout(notice.timer); notice.timer=setTimeout(()=>el.style.display='none',4200); };
+    async function api(path,options={}) { const response=await fetch(query(path),options); const payload=await response.json(); if(!response.ok||!payload.ok)throw new Error(payload.error||payload.result||'Request failed'); return payload; }
+    const escapeHTML=value=>{const el=document.createElement('span');el.textContent=value||'';return el.innerHTML;};
+    const confirmAction=(question,work)=>{if(window.confirm(question))work();};
+    function renderScripts(){const search=document.querySelector('#filter').value.trim().toLowerCase();const items=allScripts.filter(script=>`${script.name} ${script.path}`.toLowerCase().includes(search));if(!items.length){scriptsBody.innerHTML='<tr><td class="empty" colspan="3">No matching scripts.</td></tr>';return;}scriptsBody.innerHTML=items.map(script=>`<tr><td><div class="name">${escapeHTML(script.name)}</div><div class="path">${escapeHTML(script.path)}</div></td><td><span class="type ${script.type==='raw'?'raw':''}">${escapeHTML(script.type||'script')}</span></td><td><div class="tools"><button class="primary run" data-path="${encodeURIComponent(script.path)}" data-name="${encodeURIComponent(script.name)}">Run</button><button class="download" data-path="${encodeURIComponent(script.path)}">Download</button></div></td></tr>`).join('');scriptsBody.querySelectorAll('.run').forEach(button=>button.onclick=()=>confirmAction(`Run ${decodeURIComponent(button.dataset.name)}?`,()=>runScript(decodeURIComponent(button.dataset.path))));scriptsBody.querySelectorAll('.download').forEach(button=>button.onclick=()=>location.href=query(`/api/download?path=${encodeURIComponent(decodeURIComponent(button.dataset.path))}`));}
+    async function loadScripts(){const payload=await api('/api/scripts');allScripts=payload.scripts;const select=document.querySelector('#assetScript');select.innerHTML='';allScripts.forEach(script=>{const option=document.createElement('option');option.value=script.path;option.textContent=script.name;select.appendChild(option);});renderScripts();}
+    async function loadStatus(){const {status}=await api('/api/status');const online=Boolean(status.serviceOnline);document.querySelector('#service').textContent=online?'Online':'Unavailable';document.querySelector('#serviceDot').classList.toggle('online',online);document.querySelector('#connection').textContent=online?'ZXTouch service connected':'ZXTouch service unavailable';document.querySelector('#screen').textContent=status.screen.width&&status.screen.height?`${Math.round(Number(status.screen.width))} x ${Math.round(Number(status.screen.height))}`:'-';document.querySelector('#orientation').textContent=status.orientation||'-';document.querySelector('#battery').textContent=status.battery?`${Math.round(Number(status.battery))}%`:'-';document.querySelector('#foreground').textContent=status.foregroundApp||'-';document.querySelector('#activity').textContent=status.recording?'Recording':(status.scriptPlaying?'Script running':'Idle');document.querySelector('#recordingState').textContent=status.recording?'Recording':'Idle';document.querySelector('#lastAction').textContent=status.lastAction||'-';document.querySelector('#socketState').textContent=online?'Connected':'Offline';document.querySelector('#port').textContent=status.port||'-';document.querySelector('#scriptCount').textContent=status.scriptCount??'-';document.querySelector('#lastError').textContent=status.lastError||'None';}
+    async function loadLogs(){const payload=await api('/api/logs');const log=document.querySelector('#logs');const stick=log.scrollTop+log.clientHeight>=log.scrollHeight-12;log.textContent=payload.logs||'No log output yet.';if(stick)log.scrollTop=log.scrollHeight;}
+    async function runScript(path){try{await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})});notice('Script start requested');loadStatus();}catch(error){notice(error.message,true);}}
+    async function refresh(){try{await Promise.all([loadScripts(),loadStatus(),loadLogs()]);}catch(error){notice(error.message,true);}}
+    document.querySelector('#refresh').onclick=refresh;document.querySelector('#filter').oninput=renderScripts;
+    document.querySelector('#stop').onclick=()=>confirmAction('Stop the active script?',async()=>{try{await api('/api/stop',{method:'POST'});notice('Stop requested');loadStatus();}catch(error){notice(error.message,true);}});
+    document.querySelector('#recordStart').onclick=()=>confirmAction('Start a new touch recording?',async()=>{try{await api('/api/record/start',{method:'POST'});notice('Recording started');loadStatus();}catch(error){notice(error.message,true);}});
+    document.querySelector('#recordStop').onclick=()=>confirmAction('Stop and save the current recording?',async()=>{try{await api('/api/record/stop',{method:'POST'});notice('Recording saved');await refresh();}catch(error){notice(error.message,true);}});
+    document.querySelector('#clearLogs').onclick=()=>confirmAction('Clear the runtime log?',async()=>{try{await api('/api/logs/clear',{method:'POST'});notice('Logs cleared');loadLogs();loadStatus();}catch(error){notice(error.message,true);}});
+    document.querySelector('#assetForm').onsubmit=event=>{event.preventDefault();const form=event.currentTarget;if(!window.confirm(`Upload ${form.asset.files[0]?.name||'this file'} to the selected script?`))return;api('/api/assets',{method:'POST',body:new FormData(form)}).then(payload=>{notice(`Uploaded ${payload.file}`);form.reset();loadStatus();}).catch(error=>notice(error.message,true));};
+    refresh();setInterval(()=>{loadStatus().catch(()=>{});loadLogs().catch(()=>{});},2500);
   </script>
 </body>
 </html>

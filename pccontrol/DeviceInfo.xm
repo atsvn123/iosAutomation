@@ -19,7 +19,16 @@ NSString *getDeviceInfoFromRawData(UInt8* eventData, NSError **error)
     int task = [data[0] intValue];
     if (task == DEVICE_INFO_TASK_GET_SCREEN_SIZE)
     {
-        return [NSString stringWithFormat:@"%f;;%f", [Screen getScreenWidth], [Screen getScreenHeight]];
+        __block CGRect bounds = CGRectZero;
+        __block CGFloat scale = 1.0f;
+        void (^readScreen)(void) = ^{
+            UIScreen *screen = [UIScreen mainScreen];
+            bounds = screen.bounds;
+            scale = screen.scale;
+        };
+        if ([NSThread isMainThread]) readScreen();
+        else dispatch_sync(dispatch_get_main_queue(), readScreen);
+        return [NSString stringWithFormat:@"%f;;%f", CGRectGetWidth(bounds) * scale, CGRectGetHeight(bounds) * scale];
     }
     else if (task == DEVICE_INFO_TASK_GET_SCREEN_ORIENTATION)
     {
