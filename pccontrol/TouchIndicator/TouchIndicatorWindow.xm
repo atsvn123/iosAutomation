@@ -32,6 +32,7 @@ static UIInterfaceOrientation cachedOrientation = UIInterfaceOrientationPortrait
 static UIInterfaceOrientation cachedInputOrientation = UIInterfaceOrientationPortrait;
 static BOOL cachedMirrorInputX = NO;
 static BOOL indicatorLocksToPortrait = NO;
+static BOOL indicatorWindowNeedsRebuild = NO;
 
 static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHIDServiceRef service, IOHIDEventRef parentEvent);
 
@@ -232,6 +233,9 @@ static void refreshCachedIndicatorOrientation(void)
     UIInterfaceOrientation selectedOrientation = currentIndicatorOrientation();
 
     cachedOrientation = selectedOrientation;
+    if (previousPortraitLock != indicatorLocksToPortrait) {
+        indicatorWindowNeedsRebuild = YES;
+    }
     if (previousOrientation != selectedOrientation || previousPortraitLock != indicatorLocksToPortrait) {
         [touchIndicatorWindow refreshRotationPolicy];
     }
@@ -523,6 +527,33 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
     NSTimer* orientationRefreshTimer;
 }
 
+- (void)rebuildOverlayWindow {
+    UIWindow *previousWindow = _window;
+    if (previousWindow) {
+        previousWindow.hidden = YES;
+        previousWindow.rootViewController = nil;
+    }
+
+    for (int i = 0; i < 20; i++) {
+        [touchIndicatorViewList[i] removeFromSuperview];
+        touchIndicatorViewList[i] = nil;
+        [coordinateView[i] removeFromSuperview];
+        coordinateView[i] = nil;
+    }
+
+    UIWindowScene *scene = (UIWindowScene *)[[UIApplication sharedApplication].connectedScenes anyObject];
+    if (scene) {
+        _window = [[UIWindow alloc] initWithWindowScene:scene];
+    } else {
+        _window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screenBoundsWidth, screenBoundsHeight)];
+    }
+    _window.windowLevel = UIWindowLevelAlert + 2;
+    _window.rootViewController = [[ZXTouchIndicatorRootViewController alloc] init];
+    _window.backgroundColor = [UIColor clearColor];
+    _window.userInteractionEnabled = NO;
+    _window.hidden = YES;
+}
+
 - (void)updateWindowFrameForOrientation:(UIInterfaceOrientation)orientation {
     CGSize canvasSize = stableCanvasSizeForOrientation(orientation);
     [UIView performWithoutAnimation:^{
@@ -539,6 +570,12 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
 
 - (void)refreshRotationPolicy {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (indicatorWindowNeedsRebuild && _window) {
+            indicatorWindowNeedsRebuild = NO;
+            [self rebuildOverlayWindow];
+            appendTouchIndicatorDebugLog([NSString stringWithFormat:@"recreatedOverlay portraitLock=%d orientation=%ld\n",
+                                          indicatorLocksToPortrait, (long)cachedOrientation]);
+        }
         _window.autoresizingMask = indicatorLocksToPortrait ? UIViewAutoresizingNone :
             (UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin);
         if (@available(iOS 16.0, *)) {
@@ -547,6 +584,9 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
             [UIViewController attemptRotationToDeviceOrientation];
         }
         [self updateWindowFrameForOrientation:cachedOrientation];
+        if (isShowing) {
+            _window.hidden = NO;
+        }
     });
 }
 
@@ -566,17 +606,9 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
     if (self)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
-            UIWindowScene *scene = (UIWindowScene *)[[UIApplication sharedApplication].connectedScenes anyObject];
-            if (scene) {
-                _window = [[UIWindow alloc] initWithWindowScene:scene];
-            } else {
-                _window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screenBoundsWidth, screenBoundsHeight)];
-            }
-            _window.windowLevel = UIWindowLevelAlert + 2;
-            _window.rootViewController = [[ZXTouchIndicatorRootViewController alloc] init];
-            [_window setBackgroundColor:[UIColor clearColor]];
-            [_window setUserInteractionEnabled:NO];
-            [_window setAutoresizingMask:18];
+            [self rebuildOverlayWindow];
+            _window.autoresizingMask = indicatorLocksToPortrait ? UIViewAutoresizingNone :
+                (UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin);
             [self updateWindowFrameForOrientation:cachedOrientation];
 
             __weak TouchIndicatorWindow *weakSelf = self;
