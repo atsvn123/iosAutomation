@@ -31,6 +31,7 @@ static Boolean showCoordinates = true;
 static UIInterfaceOrientation cachedOrientation = UIInterfaceOrientationPortrait;
 static UIInterfaceOrientation cachedInputOrientation = UIInterfaceOrientationPortrait;
 static BOOL cachedMirrorInputX = NO;
+static BOOL indicatorLocksToPortrait = NO;
 
 static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHIDServiceRef service, IOHIDEventRef parentEvent);
 
@@ -46,6 +47,25 @@ static CGFloat scale = 0;
 static TouchIndicatorWindow *touchIndicatorWindow;
 static BOOL logNextIndicatorOrientation = NO;
 static BOOL logNextWindowGeometry = NO;
+
+@interface ZXTouchIndicatorRootViewController : UIViewController
+@end
+
+@implementation ZXTouchIndicatorRootViewController
+
+- (BOOL)shouldAutorotate {
+    return !indicatorLocksToPortrait;
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+    return indicatorLocksToPortrait ? UIInterfaceOrientationMaskPortrait : UIInterfaceOrientationMaskAll;
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation {
+    return UIInterfaceOrientationPortrait;
+}
+
+@end
 
 static void appendTouchIndicatorDebugLog(NSString *message)
 {
@@ -178,6 +198,15 @@ static UIInterfaceOrientation currentIndicatorOrientation(void)
     if (supportsLandscape && isValidInterfaceOrientation(frontOrientation)) {
         selectedOrientation = (UIInterfaceOrientation)frontOrientation;
     }
+
+    BOOL shouldLockToPortrait = !supportsLandscape;
+    if (indicatorLocksToPortrait != shouldLockToPortrait) {
+        indicatorLocksToPortrait = shouldLockToPortrait;
+        [touchIndicatorWindow refreshRotationPolicy];
+        appendTouchIndicatorDebugLog([NSString stringWithFormat:@"rotationPolicy portraitLock=%d bundle=%@\n",
+                                      indicatorLocksToPortrait, bundleIdentifier ?: @"unknown"]);
+    }
+
     cachedInputOrientation = selectedOrientation;
     cachedMirrorInputX = NO;
 
@@ -479,9 +508,26 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
 - (void)updateWindowFrameForOrientation:(UIInterfaceOrientation)orientation {
     CGSize canvasSize = stableCanvasSizeForOrientation(orientation);
     [UIView performWithoutAnimation:^{
+        if (indicatorLocksToPortrait) {
+            _window.transform = CGAffineTransformIdentity;
+            _window.bounds = CGRectMake(0, 0, canvasSize.width, canvasSize.height);
+            _window.center = CGPointMake(canvasSize.width / 2.0f, canvasSize.height / 2.0f);
+            _window.rootViewController.view.transform = CGAffineTransformIdentity;
+        }
         _window.frame = CGRectMake(0, 0, canvasSize.width, canvasSize.height);
         _window.rootViewController.view.frame = _window.bounds;
     }];
+}
+
+- (void)refreshRotationPolicy {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        _window.autoresizingMask = indicatorLocksToPortrait ? UIViewAutoresizingNone :
+            (UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin);
+        if ([_window.rootViewController respondsToSelector:@selector(setNeedsUpdateOfSupportedInterfaceOrientations)]) {
+            [_window.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
+        }
+        [self updateWindowFrameForOrientation:cachedOrientation];
+    });
 }
 
 - (id)init {
@@ -496,7 +542,7 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
                 _window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screenBoundsWidth, screenBoundsHeight)];
             }
             _window.windowLevel = UIWindowLevelAlert + 2;
-            _window.rootViewController = [[UIViewController alloc] init];
+            _window.rootViewController = [[ZXTouchIndicatorRootViewController alloc] init];
             [_window setBackgroundColor:[UIColor clearColor]];
             [_window setUserInteractionEnabled:NO];
             [_window setAutoresizingMask:18];
@@ -592,7 +638,8 @@ static void IOHIDEventCallbackForTouchIndicator(void* target, void* refcon, IOHI
 - (void) show {
     dispatch_async(dispatch_get_main_queue(), ^{
         [self updateWindowFrameForOrientation:cachedOrientation];
-        _window.autoresizingMask = UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin;
+        _window.autoresizingMask = indicatorLocksToPortrait ? UIViewAutoresizingNone :
+            (UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleBottomMargin);
         _window.hidden = NO;
     });
 }

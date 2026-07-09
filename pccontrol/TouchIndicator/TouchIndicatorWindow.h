@@ -20,6 +20,7 @@ void startTouchIndicator(NSError **error);
 - (void)hide;
 - (void)moveIndicator:(int)index x:(CGFloat)x y:(CGFloat)y majorRadius:(CGFloat)radius;
 - (void)setIndicatorColorWithRed:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha;
+- (void)refreshRotationPolicy;
 
 @end
 
