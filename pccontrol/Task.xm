@@ -18,6 +18,7 @@
 #include <TextRecognization/TextRecognizer.h>
 #include "UpdateCache.h"
 #include "Screen.h"
+#include "Crane.h"
 
 extern CFRunLoopRef recordRunLoop;
 
@@ -298,6 +299,23 @@ void processTask(UInt8 *buff, CFWriteStreamRef writeStreamRef)
             {
                 result = [[result stringByReplacingOccurrencesOfString:@"\r" withString:@" "] stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
                 notifyClient((UInt8*)[[NSString stringWithFormat:@"0;;%@\r\n", result] UTF8String], writeStreamRef);
+            }
+        }
+    }
+    else if (taskType == TASK_CRANE)
+    {
+        @autoreleasepool {
+            NSError *err = nil;
+            NSString *result = handleCraneTaskFromRawData(eventData, &err);
+            if (err)
+            {
+                notifyClient((UInt8*)[[err localizedDescription] UTF8String], writeStreamRef);
+            }
+            else
+            {
+                NSData *jsonData = [result ?: @"{}" dataUsingEncoding:NSUTF8StringEncoding];
+                NSString *encodedResult = [jsonData base64EncodedStringWithOptions:0] ?: @"e30=";
+                notifyClient((UInt8*)[[NSString stringWithFormat:@"0;;%@\r\n", encodedResult] UTF8String], writeStreamRef);
             }
         }
     }
