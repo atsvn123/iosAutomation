@@ -68,15 +68,32 @@ static NSString *ZXPhotosImportFile(NSString *filePath, NSError **error)
         return nil;
     }
 
-    NSURL *fileURL = [NSURL fileURLWithPath:filePath];
+    NSData *imageData = [NSData dataWithContentsOfFile:filePath];
+    if (!imageData.length) {
+        ZXPhotosSetError(error, [NSString stringWithFormat:@"Image file is empty: %@", filePath]);
+        return nil;
+    }
+
+    UIImage *image = [UIImage imageWithData:imageData scale:[UIScreen mainScreen].scale];
+    if (!image || image.size.width <= 0 || image.size.height <= 0) {
+        ZXPhotosSetError(error, [NSString stringWithFormat:@"Unable to decode image file: %@", filePath]);
+        return nil;
+    }
+
     __block NSString *localIdentifier = @"";
     BOOL success = ZXPhotosPerformChanges(^{
-        PHAssetChangeRequest *request = [PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:fileURL];
+        PHAssetChangeRequest *request = [PHAssetChangeRequest creationRequestForAssetFromImage:image];
         localIdentifier = request.placeholderForCreatedAsset.localIdentifier ?: @"";
     }, error);
 
     if (!success) return nil;
-    return ZXPhotosJSONString(@{ @"imported": @YES, @"local_identifier": localIdentifier, @"path": filePath });
+    return ZXPhotosJSONString(@{
+        @"imported": @YES,
+        @"local_identifier": localIdentifier,
+        @"path": filePath,
+        @"width": @(image.size.width * image.scale),
+        @"height": @(image.size.height * image.scale)
+    });
 }
 
 static NSString *ZXPhotosClearAll(NSError **error)
@@ -182,6 +199,7 @@ NSString *handlePhotosTaskFromRawData(UInt8 *eventData, NSError **error)
             }
             [handle seekToEndOfFile];
             [handle writeData:chunk];
+            [handle synchronizeFile];
             [handle closeFile];
             return ZXPhotosJSONString(@{ @"upload_id": args[1], @"written": @(chunk.length) });
         }
