@@ -2,6 +2,16 @@
 #import "Screen.h"
 #import "Toast.h"
 
+static dispatch_semaphore_t ZXScreenCaptureSemaphore(void)
+{
+    static dispatch_semaphore_t semaphore;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        semaphore = dispatch_semaphore_create(1);
+    });
+    return semaphore;
+}
+
 static void ZXScreenCaptureSetError(NSError **error, NSString *message)
 {
     if (!error) return;
@@ -18,8 +28,13 @@ static NSString *ZXScreenCaptureJSONString(id object)
 
 static NSData *ZXScreenCapturePNGData(NSError **error)
 {
+    dispatch_semaphore_wait(ZXScreenCaptureSemaphore(), DISPATCH_TIME_FOREVER);
+    CGImageRef cgImage = NULL;
+    NSData *pngData = nil;
+
+    @try {
     [Toast setToastWindowsHiddenForCapture:YES];
-    CGImageRef cgImage = [Screen createScreenShotCGImageRef];
+    cgImage = [Screen createScreenShotCGImageRef];
     [Toast setToastWindowsHiddenForCapture:NO];
 
     if (!cgImage) {
@@ -28,14 +43,19 @@ static NSData *ZXScreenCapturePNGData(NSError **error)
     }
 
     UIImage *image = [[UIImage alloc] initWithCGImage:cgImage];
-    NSData *pngData = UIImagePNGRepresentation(image);
-    CGImageRelease(cgImage);
+    pngData = UIImagePNGRepresentation(image);
 
     if (!pngData.length) {
         ZXScreenCaptureSetError(error, @"Unable to encode screenshot as PNG.");
         return nil;
     }
     return pngData;
+    }
+    @finally {
+        [Toast setToastWindowsHiddenForCapture:NO];
+        if (cgImage) CGImageRelease(cgImage);
+        dispatch_semaphore_signal(ZXScreenCaptureSemaphore());
+    }
 }
 
 static NSString *ZXScreenCaptureDefaultPath(void)

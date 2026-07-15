@@ -5,6 +5,16 @@
 #include "../Common.h"
 #include "../AlertBox.h"
 
+static dispatch_semaphore_t ZXTextRecognizerSemaphore(void)
+{
+    static dispatch_semaphore_t semaphore;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        semaphore = dispatch_semaphore_create(1);
+    });
+    return semaphore;
+}
+
 NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error)
 {
     if (SYSTEM_VERSION_LESS_THAN(@"13.0"))
@@ -59,7 +69,7 @@ NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error
         // parse minimum_height part
         if (minimumHeight <= 0)
         {
-            minimumHeight = 1/32;
+            minimumHeight = 1.0f/32.0f;
         }
 
         // parse level
@@ -70,41 +80,55 @@ NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error
         // parse languages part
         NSArray *languages = [languagesData componentsSeparatedByString:@",,"];
 
-        // Hide ZXTouch overlays while capturing so OCR never reads its own toast text.
-        [Toast setToastWindowsHiddenForCapture:YES];
-        CGImageRef screenshot = [Screen createScreenShotCGImageRef];
-        [Toast setToastWindowsHiddenForCapture:NO];
+        dispatch_semaphore_wait(ZXTextRecognizerSemaphore(), DISPATCH_TIME_FOREVER);
+        CGImageRef screenshot = NULL;
+        NSString *result = nil;
 
-        int orientation = [Screen getScreenOrientation];
+        @try {
+            // Hide ZXTouch overlays while capturing so OCR never reads its own toast text.
+            [Toast setToastWindowsHiddenForCapture:YES];
+            screenshot = [Screen createScreenShotCGImageRef];
+            [Toast setToastWindowsHiddenForCapture:NO];
 
-        // init
-        VKOcrManager* ocrManager = [[VKOcrManager alloc] initWithCGImage:screenshot area:recognizeRect orientation:orientation];
+            if (!screenshot) {
+                *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Unable to capture screenshot for OCR.\r\n"}];
+                return nil;
+            }
 
-        // set properties
-        if ([customWords count] > 1 || ![customWords[0] isEqualToString:@""])
-        {
-            NSLog(@"com.zjx.springboard: custom words set. Count: %d", [customWords count]);
-            [ocrManager setCustomWords:customWords];
+            int orientation = [Screen getScreenOrientation];
+
+            // init
+            VKOcrManager* ocrManager = [[VKOcrManager alloc] initWithCGImage:screenshot area:recognizeRect orientation:orientation];
+
+            // set properties
+            if ([customWords count] > 1 || ![customWords[0] isEqualToString:@""])
+            {
+                NSLog(@"com.zjx.springboard: custom words set. Count: %d", [customWords count]);
+                [ocrManager setCustomWords:customWords];
+            }
+            [ocrManager setMinimumHeight:minimumHeight];
+            [ocrManager setRecognitionLevel:level];
+            if ([languages count] > 1 || ![languages[0] isEqualToString:@""])
+            {
+                NSLog(@"com.zjx.springboard: languages set.");
+                [ocrManager setLanguages:languages];
+            }
+            [ocrManager setCorrection:correct];
+
+            result = [ocrManager recognize:error];
+
+            if (debugPath && ![debugPath isEqualToString:@""])
+            {
+                [ocrManager outputDebugImage:debugPath error:error];
+            }
+
+            return result;
         }
-        [ocrManager setMinimumHeight:minimumHeight];
-        [ocrManager setRecognitionLevel:level];
-        if ([languages count] > 1 || ![languages[0] isEqualToString:@""])
-        {
-            NSLog(@"com.zjx.springboard: languages set.");
-            [ocrManager setLanguages:languages];
+        @finally {
+            [Toast setToastWindowsHiddenForCapture:NO];
+            if (screenshot) CGImageRelease(screenshot);
+            dispatch_semaphore_signal(ZXTextRecognizerSemaphore());
         }
-        [ocrManager setCorrection:correct];
-
-        NSString* result = [ocrManager recognize:error];
-
-        if (debugPath && ![debugPath isEqualToString:@""])
-        {
-            [ocrManager outputDebugImage:debugPath error:error];
-        }
-
-        CFRelease(screenshot);
-        
-        return result;
     }
     else if (task == TASK_GET_SUPPORTED_LANGUAGE_LIST)
     {

@@ -169,6 +169,10 @@ OBJC_EXTERN UIImage *_UICreateScreenUIImage(void);
     IOSurfaceRef screenSurface = IOSurfaceCreate((__bridge CFDictionaryRef)(properties));
 
     properties = nil;
+    if (!screenSurface) {
+        NSLog(@"com.zjx.springboard: Unable to create IOSurface for screenshot.");
+        return nil;
+    }
     
     IOSurfaceLock(screenSurface, 0, NULL);
     CARenderServerRenderDisplay(0, CFSTR("LCD"), screenSurface, 0, 0);
@@ -176,6 +180,12 @@ OBJC_EXTERN UIImage *_UICreateScreenUIImage(void);
     CGImageRef cgImageRef = nil;
     if (screenSurface) {
         cgImageRef = UICreateCGImageFromIOSurface(screenSurface);
+        if (!cgImageRef) {
+            IOSurfaceUnlock(screenSurface, 0, NULL);
+            CFRelease(screenSurface);
+            NSLog(@"com.zjx.springboard: Unable to create CGImage from IOSurface.");
+            return nil;
+        }
         int targetWidth = CGImageGetWidth(cgImageRef);
         int targetHeight = CGImageGetHeight(cgImageRef);
 

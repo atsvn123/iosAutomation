@@ -123,6 +123,7 @@ Return the string from a area
     {
         NSLog(@"com.zjx.springboard: error happened while performing ocr. %@", err);
         *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"-1;;Error happened while performing ocr. Error: %@\r\n", err]}];
+        inProgress = false;
         return nil;
     }
     
@@ -130,10 +131,15 @@ Return the string from a area
 
     for (VNRecognizedTextObservation* i in requestResult.results)
     {
-        VNRecognizedText* text = [i topCandidates:1][0];
+        NSArray<VNRecognizedText *> *candidates = [i topCandidates:1];
+        if (candidates.count == 0) continue;
+        VNRecognizedText* text = candidates[0];
         NSString* textString = [text string];
+        if (textString.length == 0) continue;
 
-        VNRectangleObservation* boundingBox = [text boundingBoxForRange:NSMakeRange(0, [textString length]) error:nil];
+        NSError *boxError = nil;
+        VNRectangleObservation* boundingBox = [text boundingBoxForRange:NSMakeRange(0, [textString length]) error:&boxError];
+        if (!boundingBox || boxError) continue;
 
         //test = [self drawTextRectangle:CGRectMake(100, 100, 100, 100) andText:@"test"];
 
@@ -167,6 +173,7 @@ Return area that contain text
     if (err)
     {
         NSLog(@"com.zjx.springboard: error while outputing debug image.");
+        inProgress = false;
         return;
     }
 
@@ -230,16 +237,20 @@ Return area that contain text
 
     for (VNRecognizedTextObservation* i in arr)
     {
-        VNRecognizedText* text = [i topCandidates:1][0];
+        NSArray<VNRecognizedText *> *candidates = [i topCandidates:1];
+        if (candidates.count == 0) continue;
+        VNRecognizedText* text = candidates[0];
         NSString* textString = [text string];
+        if (textString.length == 0) continue;
             
         NSError *err = nil;
         VNRectangleObservation* boundingBox = [text boundingBoxForRange:NSMakeRange(0, [textString length]) error:&err];
 
-        if (err)
+        if (err || !boundingBox)
         {
             NSLog(@"com.zjx.springboard: unable to output debug image for text recognization. Error: %@", err);
             *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"-1;;Unable to output debug image for text recognization. Error: %@", err]}];
+            inProgress = false;
             return nil;
         }
 
