@@ -322,6 +322,19 @@ void showToastFromRawData(UInt8 *eventData, NSError **error)
     [Toast hideToastWithIdentifier:identifier];
 }
 
++ (void) setToastWindowsHiddenForCapture:(BOOL)hidden
+{
+    void (^updateVisibility)(void) = ^{
+        if (!toastWindows) return;
+        for (UIWindow *window in toastWindows.allValues) {
+            window.hidden = hidden;
+        }
+    };
+
+    if ([NSThread isMainThread]) updateVisibility();
+    else dispatch_sync(dispatch_get_main_queue(), updateVisibility);
+}
+
 - (void) show {}
 - (void) setContent:(NSString*)content {}
 - (void) setBackgroundColor:(UIColor*)color {}

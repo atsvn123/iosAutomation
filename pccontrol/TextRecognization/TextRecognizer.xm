@@ -1,6 +1,7 @@
 #include "TextRecognizer.h"
 #import "VKOcrManager.h"
 #import "../Screen.h"
+#import "../Toast.h"
 #include "../Common.h"
 #include "../AlertBox.h"
 
@@ -69,8 +70,10 @@ NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error
         // parse languages part
         NSArray *languages = [languagesData componentsSeparatedByString:@",,"];
 
-        // screen shot
+        // Hide ZXTouch overlays while capturing so OCR never reads its own toast text.
+        [Toast setToastWindowsHiddenForCapture:YES];
         CGImageRef screenshot = [Screen createScreenShotCGImageRef];
+        [Toast setToastWindowsHiddenForCapture:NO];
 
         int orientation = [Screen getScreenOrientation];
 

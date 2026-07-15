@@ -4,8 +4,13 @@
 #include <signal.h>
 #include <spawn.h>
 #include <sys/wait.h>
+#include <objc/message.h>
 
 extern char **environ;
+
+typedef id (*ZXMsgSendIdNoArg)(id, SEL);
+typedef id (*ZXMsgSendIdObject)(id, SEL, id);
+typedef void (*ZXMsgSendVoidNoArg)(id, SEL);
 
 int (*openApp)(CFStringRef, Boolean);
 
@@ -55,7 +60,7 @@ static id runningApplicationForBundleIdentifier(NSString *bundleIdentifier)
             for (NSString *selectorName in candidates) {
                 SEL selector = NSSelectorFromString(selectorName);
                 if (![springboard respondsToSelector:selector]) continue;
-                NSArray *apps = [springboard performSelector:selector];
+                NSArray *apps = ((ZXMsgSendIdNoArg)objc_msgSend)(springboard, selector);
                 for (id app in apps) {
                     NSString *candidateBundleID = nil;
                     if ([app respondsToSelector:@selector(bundleIdentifier)]) candidateBundleID = [app bundleIdentifier];
@@ -79,19 +84,27 @@ static NSString *executableNameForBundleIdentifier(NSString *bundleIdentifier)
     __block NSString *executableName = nil;
     dispatch_sync(dispatch_get_main_queue(), ^{
         @try {
-            id controller = [%c(SBApplicationController) sharedInstance];
+            Class controllerClass = NSClassFromString(@"SBApplicationController");
+            id controller = nil;
+            if ([controllerClass respondsToSelector:@selector(sharedInstance)]) {
+                controller = ((ZXMsgSendIdNoArg)objc_msgSend)(controllerClass, @selector(sharedInstance));
+            }
             id appInfo = nil;
             if ([controller respondsToSelector:@selector(applicationWithBundleIdentifier:)]) {
-                appInfo = [controller applicationWithBundleIdentifier:bundleIdentifier];
+                appInfo = ((ZXMsgSendIdObject)objc_msgSend)(controller, @selector(applicationWithBundleIdentifier:), bundleIdentifier);
             }
             if (!appInfo && [controller respondsToSelector:@selector(applicationWithDisplayIdentifier:)]) {
-                appInfo = [controller applicationWithDisplayIdentifier:bundleIdentifier];
+                appInfo = ((ZXMsgSendIdObject)objc_msgSend)(controller, @selector(applicationWithDisplayIdentifier:), bundleIdentifier);
             }
             if (!appInfo && [controller respondsToSelector:@selector(appInfoForDisplayID:)]) {
-                appInfo = [controller appInfoForDisplayID:bundleIdentifier];
+                appInfo = ((ZXMsgSendIdObject)objc_msgSend)(controller, @selector(appInfoForDisplayID:), bundleIdentifier);
             }
-            if ([appInfo respondsToSelector:@selector(executableName)]) executableName = [appInfo executableName];
-            else if ([appInfo respondsToSelector:@selector(bundleExecutable)]) executableName = [appInfo bundleExecutable];
+            if ([appInfo respondsToSelector:@selector(executableName)]) {
+                executableName = ((ZXMsgSendIdNoArg)objc_msgSend)(appInfo, @selector(executableName));
+            }
+            else if ([appInfo respondsToSelector:@selector(bundleExecutable)]) {
+                executableName = ((ZXMsgSendIdNoArg)objc_msgSend)(appInfo, @selector(bundleExecutable));
+            }
         }
         @catch (NSException *exception) {
             NSLog(@"com.zjx.springboard: executable lookup failed: %@", exception.reason);
@@ -135,7 +148,7 @@ static BOOL terminateRunningApplication(id app)
                     [invocation setArgument:&description atIndex:4];
                     [invocation invoke];
                 } else {
-                    [app performSelector:selector];
+                    ((ZXMsgSendVoidNoArg)objc_msgSend)(app, selector);
                 }
                 return;
             }

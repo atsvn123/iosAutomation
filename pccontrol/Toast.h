@@ -12,6 +12,7 @@ void showToastFromRawData(UInt8 *eventData, NSError **error);
 + (void) showProgressToastWithIdentifier:(NSString*)identifier content:(NSString*)content position:(int)position fontSize:(int)afontSize;
 + (void) updateProgressToastWithIdentifier:(NSString*)identifier content:(NSString*)content;
 + (void) stopProgressToastWithIdentifier:(NSString*)identifier;
++ (void) setToastWindowsHiddenForCapture:(BOOL)hidden;
 - (void) show;
 - (void) setContent:(NSString*)content;
 - (void) setBackgroundColor:(UIColor*)color;
