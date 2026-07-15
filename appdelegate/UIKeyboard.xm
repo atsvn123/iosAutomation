@@ -19,6 +19,38 @@
 #define VIRTUAL_KEYBOARD_HIDE 1
 #define VIRTUAL_KEYBOARD_SHOW 2
 
+static BOOL ZXShouldEnableKeyboardHooks(void)
+{
+    NSString *bundleIdentifier = [NSBundle mainBundle].bundleIdentifier ?: @"";
+    NSString *processName = [NSProcessInfo processInfo].processName ?: @"";
+
+    NSArray<NSString *> *blockedBundleIdentifiers = @[
+        @"com.apple.mobilesafari",
+        @"com.apple.SafariViewService",
+        @"com.apple.WebKit.WebContent",
+        @"com.apple.WebKit.Networking",
+        @"com.apple.WebKit.GPU"
+    ];
+
+    NSArray<NSString *> *blockedProcessNames = @[
+        @"MobileSafari",
+        @"SafariViewService",
+        @"WebContent",
+        @"com.apple.WebKit.WebContent",
+        @"com.apple.WebKit.Networking",
+        @"com.apple.WebKit.GPU"
+    ];
+
+    for (NSString *blocked in blockedBundleIdentifiers) {
+        if ([bundleIdentifier isEqualToString:blocked]) return NO;
+    }
+    for (NSString *blocked in blockedProcessNames) {
+        if ([processName isEqualToString:blocked] || [processName containsString:blocked]) return NO;
+    }
+
+    return YES;
+}
+
 
 @interface UIKeyboardImpl : UIView
 	+ (id)sharedInstance;
@@ -44,6 +76,8 @@
 @end
 
 
+%group ZXKeyboardHooks
+
 %hook UIKeyboardImpl
 
     - (id)initWithFrame:(CGRect)arg1 forCustomInputView:(UIView*)view
@@ -67,7 +101,7 @@
 	}
 
 	- (void)dealloc {
-        [[NSDistributedNotificationCenter defaultCenter] removeObserver:self name:@"com.zjx.zxtouch.textinput" object:nil];
+		[[NSDistributedNotificationCenter defaultCenter] removeObserver:self name:@"com.zjx.zxtouch.keyboardcontrol" object:nil];
 		//NSLog(@"com.zjx.appdelegate: UIKeyboardImpl instance deallocated");
 		return %orig;
 	}
@@ -138,3 +172,11 @@
 	}
 
 %end
+
+%end
+
+%ctor {
+    if (ZXShouldEnableKeyboardHooks()) {
+        %init(ZXKeyboardHooks);
+    }
+}
