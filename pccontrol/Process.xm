@@ -11,6 +11,7 @@ extern char **environ;
 typedef id (*ZXMsgSendIdNoArg)(id, SEL);
 typedef id (*ZXMsgSendIdObject)(id, SEL, id);
 typedef void (*ZXMsgSendVoidNoArg)(id, SEL);
+typedef void (*ZXMsgSendVoidObjectIntBoolObject)(id, SEL, id, int, BOOL, id);
 
 int (*openApp)(CFStringRef, Boolean);
 
@@ -160,6 +161,33 @@ static BOOL terminateRunningApplication(id app)
     return attempted;
 }
 
+static BOOL terminateBundleIdentifierWithFrontBoard(NSString *bundleIdentifier)
+{
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dlopen("/System/Library/PrivateFrameworks/FrontBoardServices.framework/FrontBoardServices", RTLD_LAZY | RTLD_GLOBAL);
+    });
+
+    Class serviceClass = NSClassFromString(@"FBSSystemService");
+    if (![serviceClass respondsToSelector:@selector(sharedService)]) return NO;
+
+    id service = ((ZXMsgSendIdNoArg)objc_msgSend)(serviceClass, @selector(sharedService));
+    SEL selector = @selector(terminateApplication:forReason:andReport:withDescription:);
+    if (!service || ![service respondsToSelector:selector]) return NO;
+
+    @try {
+        int reason = 1;
+        BOOL report = NO;
+        NSString *description = @"ZXTouch close_app";
+        ((ZXMsgSendVoidObjectIntBoolObject)objc_msgSend)(service, selector, bundleIdentifier, reason, report, description);
+        return YES;
+    }
+    @catch (NSException *exception) {
+        NSLog(@"com.zjx.springboard: FrontBoard terminate failed: %@", exception.reason);
+        return NO;
+    }
+}
+
 static BOOL killExecutableName(NSString *executableName)
 {
     if (executableName.length == 0) return NO;
@@ -186,9 +214,14 @@ NSString *closeAppWithBundleIdentifier(NSString *bundleIdentifier, NSError **err
         return nil;
     }
 
-    id app = runningApplicationForBundleIdentifier(bundleIdentifier);
-    BOOL terminated = terminateRunningApplication(app);
-    NSString *method = terminated ? @"springboard" : @"";
+    BOOL terminated = terminateBundleIdentifierWithFrontBoard(bundleIdentifier);
+    NSString *method = terminated ? @"frontboard" : @"";
+
+    if (!terminated) {
+        id app = runningApplicationForBundleIdentifier(bundleIdentifier);
+        terminated = terminateRunningApplication(app);
+        method = terminated ? @"springboard" : @"";
+    }
 
     if (!terminated) {
         NSString *executableName = executableNameForBundleIdentifier(bundleIdentifier);

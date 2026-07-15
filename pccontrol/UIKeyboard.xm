@@ -1,4 +1,5 @@
 #include "UIKeyboard.h"
+#include "Process.h"
 #import <UIKit/UIKit.h>
 #import <Foundation/NSDistributedNotificationCenter.h>
 
@@ -36,10 +37,20 @@ NSString* inputTextFromRawData(UInt8 *eventData, NSError **error)
     // Forward to appdelegate tweak injected in the frontmost app.
     // deliverImmediately:NO (async) — avoids the SpringBoard crash from synchronous delivery.
     NSString *taskContent = ([data count] >= 2) ? data[1] : @"";
+    id frontMostApp = getFrontMostApplication();
+    NSString *targetBundleIdentifier = nil;
+    if ([frontMostApp respondsToSelector:@selector(bundleIdentifier)]) {
+        targetBundleIdentifier = [frontMostApp bundleIdentifier];
+    }
+    if (targetBundleIdentifier.length == 0 && [frontMostApp respondsToSelector:@selector(displayIdentifier)]) {
+        targetBundleIdentifier = [frontMostApp displayIdentifier];
+    }
+    if (targetBundleIdentifier.length == 0) targetBundleIdentifier = @"";
+
     [[NSDistributedNotificationCenter defaultCenter]
         postNotificationName:@"com.zjx.zxtouch.keyboardcontrol"
         object:nil
-        userInfo:@{@"task_id": data[0], @"task_content": taskContent}
+        userInfo:@{@"task_id": data[0], @"task_content": taskContent, @"target_bundle_id": targetBundleIdentifier}
         deliverImmediately:NO];
 
     return @"";

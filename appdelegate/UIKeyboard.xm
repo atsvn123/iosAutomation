@@ -110,6 +110,14 @@ static BOOL ZXShouldEnableKeyboardHooks(void)
 	- (void)handleKeyboardNotification:(NSNotification *)notification {
 		//NSLog(@"com.zjx.appdelegate: keyboard related notification received. %@", notification);
 		NSDictionary *data = (NSDictionary*)notification.userInfo;
+        NSString *targetBundleIdentifier = data[@"target_bundle_id"] ?: @"";
+        NSString *currentBundleIdentifier = [NSBundle mainBundle].bundleIdentifier ?: @"";
+        if (targetBundleIdentifier.length > 0 && ![targetBundleIdentifier isEqualToString:currentBundleIdentifier]) {
+            return;
+        }
+        if ([UIApplication sharedApplication].applicationState != UIApplicationStateActive) {
+            return;
+        }
 
         int taskId = [data[@"task_id"] intValue];
 		if (taskId == INSERT_TEXT)
