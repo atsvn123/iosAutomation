@@ -20,6 +20,7 @@
 #include "Screen.h"
 #include "Crane.h"
 #include "Photos.h"
+#include "ScreenCapture.h"
 
 extern CFRunLoopRef recordRunLoop;
 
@@ -88,6 +89,23 @@ void processTask(UInt8 *buff, CFWriteStreamRef writeStreamRef)
             else
             {
                 notifyClient((UInt8*)"0\r\n", writeStreamRef);
+            }
+        }
+    }
+    else if (taskType == TASK_SCREEN_CAPTURE)
+    {
+        @autoreleasepool {
+            NSError *err = nil;
+            NSString *result = handleScreenCaptureTaskFromRawData(eventData, &err);
+            if (err)
+            {
+                notifyClient((UInt8*)[[err localizedDescription] UTF8String], writeStreamRef);
+            }
+            else
+            {
+                NSData *jsonData = [result ?: @"{}" dataUsingEncoding:NSUTF8StringEncoding];
+                NSString *encodedResult = [jsonData base64EncodedStringWithOptions:0] ?: @"e30=";
+                notifyClient((UInt8*)[[NSString stringWithFormat:@"0;;%@\r\n", encodedResult] UTF8String], writeStreamRef);
             }
         }
     }

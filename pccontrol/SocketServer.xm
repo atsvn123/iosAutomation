@@ -87,14 +87,26 @@ static void readStream(CFReadStreamRef readStream, CFStreamEventType eventype, v
 
 int notifyClient(UInt8* msg, CFWriteStreamRef client)
 {
-    int result;
+    int result = -1;
     //dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         //NSLog(@"com.zjx.springboard: client: %x", client);
         if (client != 0)
         {
-            result = CFWriteStreamWrite(client, msg, strlen((char*)msg));
+            UInt8 *cursor = msg;
+            CFIndex remaining = strlen((char*)msg);
+            CFIndex totalWritten = 0;
+            while (remaining > 0) {
+                CFIndex written = CFWriteStreamWrite(client, cursor, remaining);
+                if (written <= 0) {
+                    result = (int)written;
+                    return result;
+                }
+                cursor += written;
+                remaining -= written;
+                totalWritten += written;
+            }
+            result = (int)totalWritten;
         }
-        result = -1;
     //});
     return result;
 }
