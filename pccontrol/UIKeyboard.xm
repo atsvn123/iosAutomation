@@ -2,6 +2,9 @@
 #include "Process.h"
 #import <UIKit/UIKit.h>
 #import <Foundation/NSDistributedNotificationCenter.h>
+#include <objc/message.h>
+
+typedef id (*ZXKeyboardMsgSendIdNoArg)(id, SEL);
 
 #define TASK_GET_TEXT_FROM_CLIPBOARD 6
 #define TASK_SAVE_TEXT_TO_CLIPBOARD 7
@@ -43,7 +46,7 @@ NSString* inputTextFromRawData(UInt8 *eventData, NSError **error)
         targetBundleIdentifier = [frontMostApp bundleIdentifier];
     }
     if (targetBundleIdentifier.length == 0 && [frontMostApp respondsToSelector:@selector(displayIdentifier)]) {
-        targetBundleIdentifier = [frontMostApp displayIdentifier];
+        targetBundleIdentifier = ((ZXKeyboardMsgSendIdNoArg)objc_msgSend)(frontMostApp, @selector(displayIdentifier));
     }
     if (targetBundleIdentifier.length == 0) targetBundleIdentifier = @"";
 
