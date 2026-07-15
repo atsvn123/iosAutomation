@@ -6,6 +6,8 @@
 
 int switchProcessForegroundFromRawData(UInt8 *eventData);
 int bringAppForeground(NSString *appIdentifier);
+NSString *closeAppFromRawData(UInt8 *eventData, NSError **error);
+NSString *closeAppWithBundleIdentifier(NSString *bundleIdentifier, NSError **error);
 id getFrontMostApplication();
 
 #endif

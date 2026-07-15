@@ -59,6 +59,23 @@ void processTask(UInt8 *buff, CFWriteStreamRef writeStreamRef)
             notifyClient((UInt8*)"0\r\n", writeStreamRef); 
         }
     }
+    else if (taskType == TASK_PROCESS_CLOSE_APP)
+    {
+        @autoreleasepool {
+            NSError *err = nil;
+            NSString *result = closeAppFromRawData(eventData, &err);
+            if (err)
+            {
+                notifyClient((UInt8*)[[err localizedDescription] UTF8String], writeStreamRef);
+            }
+            else
+            {
+                NSData *jsonData = [result ?: @"{}" dataUsingEncoding:NSUTF8StringEncoding];
+                NSString *encodedResult = [jsonData base64EncodedStringWithOptions:0] ?: @"e30=";
+                notifyClient((UInt8*)[[NSString stringWithFormat:@"0;;%@\r\n", encodedResult] UTF8String], writeStreamRef);
+            }
+        }
+    }
     else if (taskType == TASK_SHOW_ALERT_BOX)
     {
         @autoreleasepool{   
