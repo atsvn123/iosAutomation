@@ -1,4 +1,5 @@
 #import "Photos.h"
+#import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
 
 static NSString *ZXPhotosUploadDirectory(void)
