@@ -66,11 +66,8 @@ NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error
         // parse customwords part
         NSArray *customWords = [customWordsData componentsSeparatedByString:@",,"];
 
-        // parse minimum_height part
-        if (minimumHeight <= 0)
-        {
-            minimumHeight = 1.0f/32.0f;
-        }
+        // Leave Vision's default when caller does not explicitly set minimum_height.
+        if (minimumHeight < 0) minimumHeight = 0;
 
         // parse level
         if (levelData == 1)

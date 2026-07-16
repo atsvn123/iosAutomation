@@ -293,7 +293,7 @@ Return area that contain text
 
 
 - (void)setMinimumHeight:(float)height {
-    request.minimumTextHeight = height;
+    if (height > 0) request.minimumTextHeight = height;
 }
 
 - (void)setCustomWords:(NSArray*)customWords {
