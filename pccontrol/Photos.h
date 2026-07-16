@@ -9,6 +9,7 @@
 #define PHOTOS_TASK_UPLOAD_BEGIN 4
 #define PHOTOS_TASK_UPLOAD_CHUNK 5
 #define PHOTOS_TASK_UPLOAD_COMMIT 6
+#define PHOTOS_TASK_IMPORT_URL 7
 
 NSString *handlePhotosTaskFromRawData(UInt8 *eventData, NSError **error);
 

@@ -62,16 +62,10 @@ static NSUInteger ZXPhotosAssetCount(PHAssetMediaType mediaType)
     return [PHAsset fetchAssetsWithOptions:options].count;
 }
 
-static NSString *ZXPhotosImportFile(NSString *filePath, NSError **error)
+static NSString *ZXPhotosImportImageData(NSData *imageData, NSString *source, NSError **error)
 {
-    if (filePath.length == 0 || ![[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-        ZXPhotosSetError(error, [NSString stringWithFormat:@"Image file does not exist: %@", filePath ?: @""]);
-        return nil;
-    }
-
-    NSData *imageData = [NSData dataWithContentsOfFile:filePath];
     if (!imageData.length) {
-        ZXPhotosSetError(error, [NSString stringWithFormat:@"Image file is empty: %@", filePath]);
+        ZXPhotosSetError(error, @"Image data is empty.");
         return nil;
     }
 
@@ -83,7 +77,9 @@ static NSString *ZXPhotosImportFile(NSString *filePath, NSError **error)
 
     __block NSString *localIdentifier = @"";
     BOOL success = ZXPhotosPerformChanges(^{
-        PHAssetChangeRequest *request = [PHAssetChangeRequest creationRequestForAssetFromImage:image];
+        PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAsset];
+        PHAssetResourceCreationOptions *options = [[PHAssetResourceCreationOptions alloc] init];
+        [request addResourceWithType:PHAssetResourceTypePhoto data:imageData options:options];
         localIdentifier = request.placeholderForCreatedAsset.localIdentifier ?: @"";
     }, error);
 
@@ -91,10 +87,44 @@ static NSString *ZXPhotosImportFile(NSString *filePath, NSError **error)
     return ZXPhotosJSONString(@{
         @"imported": @YES,
         @"local_identifier": localIdentifier,
-        @"path": filePath,
+        @"source": source ?: @"",
         @"width": @(image.size.width * image.scale),
         @"height": @(image.size.height * image.scale)
     });
+}
+
+static NSString *ZXPhotosImportFile(NSString *filePath, NSError **error)
+{
+    if (filePath.length == 0 || ![[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+        ZXPhotosSetError(error, [NSString stringWithFormat:@"Image file does not exist: %@", filePath ?: @""]);
+        return nil;
+    }
+
+    NSData *imageData = [NSData dataWithContentsOfFile:filePath];
+    NSString *result = ZXPhotosImportImageData(imageData, filePath, error);
+    if (!result) return nil;
+
+    NSMutableDictionary *payload = [[NSJSONSerialization JSONObjectWithData:[result dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil] mutableCopy];
+    payload[@"path"] = filePath;
+    return ZXPhotosJSONString(payload ?: @{});
+}
+
+static NSString *ZXPhotosImportURL(NSString *urlString, NSError **error)
+{
+    NSURL *url = [NSURL URLWithString:urlString ?: @""];
+    if (!url) {
+        ZXPhotosSetError(error, [NSString stringWithFormat:@"Invalid image URL: %@", urlString ?: @""]);
+        return nil;
+    }
+
+    NSError *downloadError = nil;
+    NSData *imageData = [NSData dataWithContentsOfURL:url options:0 error:&downloadError];
+    if (!imageData.length) {
+        ZXPhotosSetError(error, [NSString stringWithFormat:@"Unable to download image URL: %@. Error: %@", urlString ?: @"", downloadError.localizedDescription ?: @""]);
+        return nil;
+    }
+
+    return ZXPhotosImportImageData(imageData, urlString, error);
 }
 
 static NSString *ZXPhotosClearAll(NSError **error)
@@ -133,7 +163,7 @@ static NSString *ZXPhotosImportBase64(NSString *base64Data, NSString *extension,
         ZXPhotosSetError(error, @"Unable to write uploaded image buffer.");
         return nil;
     }
-    return ZXPhotosImportFile(filePath, error);
+    return ZXPhotosImportImageData(imageData, @"base64", error);
 }
 
 static NSString *ZXPhotosUploadPath(NSString *uploadID, NSString *extension)
@@ -212,6 +242,13 @@ NSString *handlePhotosTaskFromRawData(UInt8 *eventData, NSError **error)
             NSString *extension = args.count >= 3 ? args[2] : @"jpg";
             NSString *filePath = ZXPhotosUploadPath(args[1], extension);
             return ZXPhotosImportFile(filePath, error);
+        }
+        else if (task == PHOTOS_TASK_IMPORT_URL) {
+            if (args.count < 2) {
+                ZXPhotosSetError(error, @"Missing image URL.");
+                return nil;
+            }
+            return ZXPhotosImportURL(args[1], error);
         }
 
         ZXPhotosSetError(error, @"Unknown Photos task.");
