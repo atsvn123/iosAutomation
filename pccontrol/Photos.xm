@@ -71,7 +71,7 @@ static NSString *ZXPhotosImportImageData(NSData *imageData, NSString *source, NS
 
     UIImage *image = [UIImage imageWithData:imageData scale:[UIScreen mainScreen].scale];
     if (!image || image.size.width <= 0 || image.size.height <= 0) {
-        ZXPhotosSetError(error, [NSString stringWithFormat:@"Unable to decode image file: %@", filePath]);
+        ZXPhotosSetError(error, [NSString stringWithFormat:@"Unable to decode image data: %@", source ?: @""]);
         return nil;
     }
 
