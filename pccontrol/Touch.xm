@@ -3,6 +3,7 @@
 #include "Screen.h"
 #include "AlertBox.h"
 #include "Task.h"
+#include "Toast.h"
 
 #define TOUCH_SENDER_ID_PLIST_FILE_NAME @"senderid.plist"
 
@@ -157,6 +158,8 @@ Perform touch events with data received from socket
 */
 void performTouchFromRawData(UInt8 *eventData)
 {
+    [Toast setToastWindowsHiddenForCapture:YES];
+    @try {
     // generate a parent event
 	IOHIDEventRef parent = IOHIDEventCreateDigitizerEvent(kCFAllocatorDefault, mach_absolute_time(), 3, 99, 1, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0, 0, 0); 
     IOHIDEventSetIntegerValue(parent , 0xb0019, 1); //set flags of parent event   flags: 0x20001 -> 0xa0001
@@ -213,6 +216,10 @@ void performTouchFromRawData(UInt8 *eventData)
 
     postIOHIDEvent(parent);
     CFRelease(parent);
+    }
+    @finally {
+    [Toast setToastWindowsHiddenForCapture:NO];
+    }
 }
 
 /**
