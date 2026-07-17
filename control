@@ -5,6 +5,6 @@ Depends: mobilesubstrate | ellekit, firmware (>= 15.0)
 Architecture: iphoneos-arm64
 Description: ZXTouch Main Application (rootless, iOS 15-16)
 Maintainer: Jason Z
-Author: Jason Z
+Author: azdev_vn
 Section: Utilities
 Tag: role::developer

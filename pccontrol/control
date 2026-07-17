@@ -5,5 +5,5 @@ Version: 0.1.3
 Architecture: iphoneos-arm64
 Description: iOS touch simulation library (rootless, iOS 15-16)
 Maintainer: Jason Z
-Author: Jason Z
+Author: azdev_vn
 Section: Tweaks

@@ -5,5 +5,5 @@ Depends: mobilesubstrate | ellekit, firmware (>= 15.0)
 Architecture: iphoneos-arm64
 Description: A component of zxtouch inside apps that works for zxtouch
 Maintainer: Jason Z
-Author: Jason Z
+Author: azdev_vn
 Section: Tweaks

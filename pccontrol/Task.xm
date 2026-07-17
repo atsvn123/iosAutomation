@@ -109,6 +109,23 @@ void processTask(UInt8 *buff, CFWriteStreamRef writeStreamRef)
             }
         }
     }
+    else if (taskType == TASK_ENSURE_SCREEN_ACTIVE)
+    {
+        @autoreleasepool {
+            NSError *err = nil;
+            NSString *result = ensureScreenActive(&err);
+            if (err)
+            {
+                notifyClient((UInt8*)[[err localizedDescription] UTF8String], writeStreamRef);
+            }
+            else
+            {
+                NSData *jsonData = [result ?: @"{}" dataUsingEncoding:NSUTF8StringEncoding];
+                NSString *encodedResult = [jsonData base64EncodedStringWithOptions:0] ?: @"e30=";
+                notifyClient((UInt8*)[[NSString stringWithFormat:@"0;;%@\r\n", encodedResult] UTF8String], writeStreamRef);
+            }
+        }
+    }
     else if (taskType == TASK_USLEEP)
     {
         if (writeStreamRef)

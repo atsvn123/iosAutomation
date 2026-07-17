@@ -11,6 +11,7 @@ extern char **environ;
 typedef id (*ZXMsgSendIdNoArg)(id, SEL);
 typedef id (*ZXMsgSendIdObject)(id, SEL, id);
 typedef void (*ZXMsgSendVoidNoArg)(id, SEL);
+typedef BOOL (*ZXMsgSendBoolNoArg)(id, SEL);
 typedef void (*ZXMsgSendVoidObjectIntBoolObject)(id, SEL, id, int, BOOL, id);
 
 int (*openApp)(CFStringRef, Boolean);
@@ -235,6 +236,65 @@ NSString *closeAppWithBundleIdentifier(NSString *bundleIdentifier, NSError **err
     }
 
     return processJSONString(@{ @"closed": @YES, @"bundle_id": bundleIdentifier, @"method": method });
+}
+
+NSString *ensureScreenActive(NSError **error)
+{
+    __block BOOL attempted = NO;
+    __block BOOL wasLocked = NO;
+    __block BOOL isLockedAfter = NO;
+
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        @try {
+            SpringBoard *springboard = (SpringBoard*)[%c(SpringBoard) sharedApplication];
+            if ([springboard respondsToSelector:@selector(isLocked)]) {
+                wasLocked = ((ZXMsgSendBoolNoArg)objc_msgSend)(springboard, @selector(isLocked));
+            }
+
+            NSArray<NSString *> *selectors = @[
+                @"wakeUp",
+                @"_wakeUp",
+                @"wakeUpForReason:",
+                @"turnOnScreenFullyWithBacklightSource:"
+            ];
+
+            for (NSString *selectorName in selectors) {
+                SEL selector = NSSelectorFromString(selectorName);
+                if (![springboard respondsToSelector:selector]) continue;
+                attempted = YES;
+                if ([selectorName hasSuffix:@":"]) {
+                    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[springboard methodSignatureForSelector:selector]];
+                    int reason = 1;
+                    [invocation setSelector:selector];
+                    [invocation setTarget:springboard];
+                    [invocation setArgument:&reason atIndex:2];
+                    [invocation invoke];
+                } else {
+                    ((ZXMsgSendVoidNoArg)objc_msgSend)(springboard, selector);
+                }
+                break;
+            }
+
+            if ([springboard respondsToSelector:@selector(isLocked)]) {
+                isLockedAfter = ((ZXMsgSendBoolNoArg)objc_msgSend)(springboard, @selector(isLocked));
+            }
+        }
+        @catch (NSException *exception) {
+            NSLog(@"com.zjx.springboard: ensure screen active failed: %@", exception.reason);
+        }
+    });
+
+    if (!attempted) {
+        processSetError(error, @"Unable to wake screen: no supported SpringBoard wake selector found.");
+        return nil;
+    }
+
+    return processJSONString(@{
+        @"screen_active": @YES,
+        @"was_locked": @(wasLocked),
+        @"is_locked": @(isLockedAfter),
+        @"method": @"springboard"
+    });
 }
 
 id getFrontMostApplication()
